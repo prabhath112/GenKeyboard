@@ -66,3 +66,10 @@ target/
 **/*.rs.bk
 *.pdb
 .code-graph/
+
+# Release signing (never commit)
+keystore.properties
+*.keystore
+
+# IDE
+.vs/

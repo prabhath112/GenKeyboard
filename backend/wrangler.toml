@@ -1,0 +1,26 @@
+name = "genkeyboard-api"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+# Daily request counters per device. Create with: wrangler kv namespace create QUOTA
+[[kv_namespaces]]
+binding = "QUOTA"
+id = "7f2cd4c11b65494ab58c9d538e3aedff"
+preview_id = "14107cf722214a649e290c3169383b3a"
+
+[vars]
+# Fallback order. First healthy provider wins. Providers without a key are skipped.
+PROVIDER_ORDER = "xai,openai,gemini,anthropic,openrouter"
+# Model IDs. Verify against each vendor's current list before deploy.
+XAI_MODEL = "grok-4-fast"
+OPENAI_MODEL = "gpt-5-mini"
+GEMINI_MODEL = "gemini-3.6-flash"
+ANTHROPIC_MODEL = "claude-haiku-4-5-20251001"
+OPENROUTER_MODEL = "x-ai/grok-4.3"
+# Per provider. Keep timeout x provider count under the app's 25s HTTP timeout.
+PROVIDER_TIMEOUT_MS = "12000"
+FREE_DAILY_LIMIT = "50"
+MAX_TEXT_CHARS = "4000"
+
+# Secrets (never in this file). Set with: wrangler secret put <NAME>
+#   XAI_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY, OPENROUTER_API_KEY

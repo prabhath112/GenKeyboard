@@ -3,7 +3,6 @@
 ## Languages
 
 - [Summary](#summary)
-- [Chinese / 中文](LANGUAGEPACKS-CHINESE.md)
 
 ## Summary
 

@@ -19,6 +19,7 @@ package dev.patrickgold.florisboard.app
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import dev.patrickgold.florisboard.BuildConfig
 import dev.patrickgold.florisboard.app.settings.theme.ColorPreferenceSerializer
 import dev.patrickgold.florisboard.app.settings.theme.DisplayKbdAfterDialogs
 import dev.patrickgold.florisboard.app.settings.theme.SnyggLevel
@@ -73,6 +74,23 @@ val FlorisPreferenceStore = jetprefDataStoreOf(FlorisPreferenceModel::class)
 abstract class FlorisPreferenceModel : PreferenceModel() {
     companion object {
         const val NAME = "florisboard-app-prefs"
+    }
+
+    val ai = Ai()
+    inner class Ai {
+        val enabled = boolean(
+            key = "ai__enabled",
+            default = true,
+        )
+        val backendUrl = string(
+            key = "ai__backend_url",
+            default = BuildConfig.AI_BACKEND_URL,
+        )
+        /** Random UUID, generated on first AI request. Acts as the quota key on the backend. */
+        val deviceId = string(
+            key = "ai__device_id",
+            default = "",
+        )
     }
 
     val clipboard = Clipboard()

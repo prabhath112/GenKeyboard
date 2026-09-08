@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GenKeyboard-specific strings. Kept separate from upstream FlorisBoard strings.xml. -->
+<resources>
+    <string name="quick_action__ime_ui_mode_ai" comment="Please mind the limited available space for the quick action strings">AI</string>
+    <string name="quick_action__ime_ui_mode_ai__tooltip">Open AI writing tools</string>
+
+    <string name="ai__header_title">AI writing tools</string>
+
+    <string name="ai__section_quick_fixes">Quick fixes</string>
+    <string name="ai__section_tone">Change tone</string>
+    <string name="ai__section_reply">Smart reply</string>
+    <string name="ai__section_translate">Translate</string>
+
+    <string name="ai__action_grammar">Fix grammar</string>
+    <string name="ai__action_paraphrase">Paraphrase</string>
+    <string name="ai__action_shorten">Shorten</string>
+    <string name="ai__action_expand">Expand</string>
+    <string name="ai__action_summarize">Summarize</string>
+    <string name="ai__action_emojify">Emojify</string>
+    <string name="ai__action_humanize">Humanize</string>
+
+    <string name="ai__tone_professional">Professional</string>
+    <string name="ai__tone_casual">Casual</string>
+    <string name="ai__tone_polite">Polite</string>
+    <string name="ai__tone_romantic">Romantic</string>
+    <string name="ai__tone_empathetic">Empathetic</string>
+    <string name="ai__tone_funny">Funny</string>
+    <string name="ai__tone_poetic">Poetic</string>
+    <string name="ai__tone_sarcastic">Sarcastic</string>
+    <string name="ai__tone_angry">Angry</string>
+    <string name="ai__tone_flirty">Flirty</string>
+    <string name="ai__tone_genz">Gen-Z</string>
+    <string name="ai__tone_witty">Witty</string>
+
+    <string name="ai__reply_positive">Positive reply</string>
+    <string name="ai__reply_neutral">Neutral reply</string>
+    <string name="ai__reply_negative">Negative reply</string>
+
+    <string name="ai__status_working">Rewriting…</string>
+    <string name="ai__status_applied">Text replaced</string>
+    <string name="ai__status_remaining">{count} left today</string>
+
+    <string name="ai__button_replace">Replace</string>
+    <string name="ai__button_discard">Discard</string>
+    <string name="ai__button_undo">Undo</string>
+    <string name="ai__button_done">Done</string>
+    <string name="ai__button_cancel">Cancel</string>
+
+    <string name="ai__error_no_text">Type or select some text first.</string>
+    <string name="ai__error_sensitive_field">AI tools are disabled in password fields.</string>
+    <string name="ai__error_text_too_long">Text is too long. Select a shorter part.</string>
+    <string name="ai__error_network">No connection. Check your network and try again.</string>
+    <string name="ai__error_timeout">The AI took too long. Try again.</string>
+    <string name="ai__error_unauthorized">This device is not authorized. Reinstall or contact support.</string>
+    <string name="ai__error_quota">Daily free limit reached. Upgrade for unlimited rewrites.</string>
+    <string name="ai__error_invalid">That request could not be processed.</string>
+    <string name="ai__error_upstream">AI service is unavailable right now. Try again shortly.</string>
+
+    <string name="pref__ai__title">AI writing tools</string>
+    <string name="pref__ai__enabled__label">Enable AI tools</string>
+    <string name="pref__ai__backend_url__label">Backend URL</string>
+</resources>

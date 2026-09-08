@@ -3,6 +3,7 @@
   <component name="ExternalDependencies">
     <plugin id="androidx.compose.plugins.idea" />
     <plugin id="com.android.tools.design" />
+    <plugin id="com.google.tools.ij.aiplugin" />
     <plugin id="com.intellij.nativeDebug" />
     <plugin id="kotest-plugin-intellij" />
     <plugin id="org.jetbrains.android" />
