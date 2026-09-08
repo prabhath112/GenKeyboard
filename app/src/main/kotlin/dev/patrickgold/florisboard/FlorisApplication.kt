@@ -16,6 +16,7 @@
 
 package dev.patrickgold.florisboard
 
+import com.genkeyboard.ai.AiManager
 import android.app.Application
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -73,6 +74,7 @@ class FlorisApplication : Application() {
     private val scope = CoroutineScope(Dispatchers.Default)
     val preferenceStoreLoaded = MutableStateFlow(false)
 
+    val aiManager = lazy { AiManager(this) }
     val cacheManager = lazy { CacheManager(this) }
     val clipboardManager = lazy { ClipboardManager(this) }
     val editorInstance = lazy { EditorInstance(this) }
@@ -154,6 +156,8 @@ private tailrec fun Context.florisApplication(): FlorisApplication {
 }
 
 fun Context.appContext() = lazyOf(this.florisApplication())
+
+fun Context.aiManager() = this.florisApplication().aiManager
 
 fun Context.cacheManager() = this.florisApplication().cacheManager
 

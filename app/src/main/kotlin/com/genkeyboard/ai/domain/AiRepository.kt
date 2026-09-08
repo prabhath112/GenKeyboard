@@ -1,11 +1,11 @@
 /*
- * Copyright (C) 2021-2025 The FlorisBoard Contributors
+ * Copyright (C) 2026 GenKeyboard authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,17 +14,9 @@
  * limitations under the License.
  */
 
-package dev.patrickgold.florisboard.ime
+package com.genkeyboard.ai.domain
 
-enum class ImeUiMode(val value: Int) {
-    TEXT(0),
-    MEDIA(1),
-    CLIPBOARD(2),
-    AI(3);
-
-    companion object {
-        fun fromInt(int: Int) = entries.firstOrNull { it.value == int } ?: TEXT
-    }
-
-    fun toInt(): Int = value
+/** Boundary to whatever performs the transformation (remote backend today, on-device model later). */
+interface AiRepository {
+    suspend fun transform(text: String, action: AiAction): AiResult
 }
