@@ -10,18 +10,20 @@ preview_id = "14107cf722214a649e290c3169383b3a"
 
 [vars]
 # Fallback order. First healthy provider wins. Providers without a key are skipped.
-PROVIDER_ORDER = "gemini,gemini_lite,xai,openai,anthropic,openrouter"
+PROVIDER_ORDER = "gemini,xai,openai,anthropic,openrouter"
 # Model IDs. Verify against each vendor's current list before deploy.
 XAI_MODEL = "grok-4-fast"
 OPENAI_MODEL = "gpt-5-mini"
-GEMINI_MODEL = "gemini-3.1-flash-lite"
-# Free tier: 3.1 flash lite = 500 req/day, 2.5 flash lite = unlimited/day (slower). 3.6 flash = 20/day, unusable.
-GEMINI_FALLBACK_MODEL = "gemini-2.5-flash-lite"
+GEMINI_MODEL = "gemini-3.1-flash-lite,gemini-3.5-flash-lite,gemini-2.5-flash-lite,gemini-3.6-flash"
 ANTHROPIC_MODEL = "claude-haiku-4-5-20251001"
 OPENROUTER_MODEL = "x-ai/grok-4.3"
-# Per provider. Keep timeout x provider count under the app's 25s HTTP timeout.
-PROVIDER_TIMEOUT_MS = "12000"
-FREE_DAILY_LIMIT = "50"
+# Per provider. Lite models answer in 2-5s; 8s x 3 failing Gemini models still fits the app's 25s HTTP timeout.
+PROVIDER_TIMEOUT_MS = "8000"
+# Hidden per-device abuse cap. Users never see it.
+DEVICE_DAILY_LIMIT = "500"
+# Per-model daily budgets with headroom under the vendor free-tier caps. 0 = unlimited.
+# Spent providers are skipped for the rest of the day; the next one in PROVIDER_ORDER answers.
+PROVIDER_DAILY_LIMITS = "gemini:gemini-3.1-flash-lite=450,gemini:gemini-3.5-flash-lite=450,gemini:gemini-3.6-flash=18,openrouter=100"
 MAX_TEXT_CHARS = "4000"
 
 # Secrets (never in this file). Set with: wrangler secret put <NAME>

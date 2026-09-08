@@ -4,3 +4,5 @@ OPENAI_API_KEY=
 GEMINI_API_KEY=
 ANTHROPIC_API_KEY=
 OPENROUTER_API_KEY=
+# Comma-separated device ids exempt from the per-device cap (your own phones). Treat like a password.
+UNLIMITED_DEVICE_IDS=

@@ -93,6 +93,11 @@ export class ProviderChain implements ChatProvider {
     private readonly providers: ChatProvider[],
     private readonly onFailure: (err: ProviderError) => void = () => {},
     private readonly perProviderTimeoutMs?: number,
+    /** Optional daily-budget gate. Providers it rejects are skipped without a network call. */
+    private readonly gate?: {
+      allow(name: string): Promise<boolean>;
+      record(name: string, err?: ProviderError): Promise<void>;
+    },
   ) {
     if (providers.length === 0) throw new Error("ProviderChain requires at least one provider");
   }
@@ -102,17 +107,22 @@ export class ProviderChain implements ChatProvider {
   }
 
   async completeWithSource(messages: ChatMessage[], signal?: AbortSignal): Promise<ChainResult> {
-    let lastError: unknown;
+    let lastError: unknown = new Error("all providers over budget");
     for (const p of this.providers) {
+      if (this.gate && !(await this.gate.allow(p.name))) continue;
       try {
         const perProvider = this.perProviderTimeoutMs
           ? AbortSignal.any([...(signal ? [signal] : []), AbortSignal.timeout(this.perProviderTimeoutMs)])
           : signal;
         const text = await p.complete(messages, perProvider);
+        await this.gate?.record(p.name);
         return { text, provider: p.name };
       } catch (e) {
         lastError = e;
-        if (e instanceof ProviderError) this.onFailure(e);
+        if (e instanceof ProviderError) {
+          this.onFailure(e);
+          await this.gate?.record(p.name, e);
+        }
         if (signal?.aborted) break;
       }
     }
@@ -128,7 +138,6 @@ export interface ProviderEnv {
   OPENAI_MODEL?: string;
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
-  GEMINI_FALLBACK_MODEL?: string;
   ANTHROPIC_API_KEY?: string;
   ANTHROPIC_MODEL?: string;
   OPENROUTER_API_KEY?: string;
@@ -153,14 +162,6 @@ const VENDORS: Record<string, VendorSpec> = {
     // Gemini 3.x thinks before answering; low effort keeps a keyboard round trip in the ~2s range.
     extraBody: { extra_body: { google: { thinking_config: { thinking_level: "minimal" } } } },
   },
-  // Same key, second model. Free tier caps each model per day, so a second Gemini model doubles headroom
-  // before we fall through to a paid vendor.
-  gemini_lite: {
-    baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
-    keyVar: "GEMINI_API_KEY",
-    modelVar: "GEMINI_FALLBACK_MODEL",
-    extraBody: { extra_body: { google: { thinking_config: { thinking_level: "minimal" } } } },
-  },
   anthropic: { baseUrl: "https://api.anthropic.com/v1", keyVar: "ANTHROPIC_API_KEY", modelVar: "ANTHROPIC_MODEL" },
   openrouter: {
     baseUrl: "https://openrouter.ai/api/v1",
@@ -181,11 +182,24 @@ export function providersFromEnv(env: ProviderEnv, fetchFn?: typeof fetch): Chat
     const spec = VENDORS[name];
     if (!spec) continue;
     const apiKey = env[spec.keyVar];
-    const model = env[spec.modelVar];
-    if (!apiKey || !model) continue;
-    out.push(
-      new OpenAiCompatProvider({ name, baseUrl: spec.baseUrl, apiKey, model, fetchFn, extraHeaders: spec.extraHeaders, extraBody: spec.extraBody }),
-    );
+    const models = (env[spec.modelVar] ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+    if (!apiKey || models.length === 0) continue;
+    // A model var may list several models ("a,b,c"): same key, tried in order. Free tiers cap each
+    // model per day, so each extra model adds a day's worth of headroom. Names become "vendor:model"
+    // so PROVIDER_DAILY_LIMITS can budget them individually.
+    for (const model of models) {
+      out.push(
+        new OpenAiCompatProvider({
+          name: models.length > 1 ? `${name}:${model}` : name,
+          baseUrl: spec.baseUrl,
+          apiKey,
+          model,
+          fetchFn,
+          extraHeaders: spec.extraHeaders,
+          extraBody: spec.extraBody,
+        }),
+      );
+    }
   }
   return out;
 }

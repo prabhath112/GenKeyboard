@@ -55,4 +55,13 @@ describe("providersFromEnv", () => {
     });
     expect(ps.map((p) => p.name)).toEqual(["xai", "gemini"]);
   });
+
+  it("expands a comma-separated model list into one provider per model", () => {
+    const ps = providersFromEnv({
+      PROVIDER_ORDER: "gemini,openrouter",
+      GEMINI_API_KEY: "k", GEMINI_MODEL: "lite-a, lite-b,unlimited-c",
+      OPENROUTER_API_KEY: "k", OPENROUTER_MODEL: "grok",
+    });
+    expect(ps.map((p) => p.name)).toEqual(["gemini:lite-a", "gemini:lite-b", "gemini:unlimited-c", "openrouter"]);
+  });
 });
