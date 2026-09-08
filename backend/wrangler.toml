@@ -28,3 +28,7 @@ MAX_TEXT_CHARS = "4000"
 
 # Secrets (never in this file). Set with: wrangler secret put <NAME>
 #   XAI_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY, OPENROUTER_API_KEY
+
+# Daily summary to Discord at 00:05 UTC (needs DISCORD_WEBHOOK_URL secret; no-op without it).
+[triggers]
+crons = ["5 0 * * *"]
