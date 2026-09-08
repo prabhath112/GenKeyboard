@@ -12,7 +12,7 @@ GenKeyboard is a fork of [FlorisBoard](https://github.com/florisboard/florisboar
 |---|---|
 | Keyboard engine: layouts, touch handling, suggestions, glide typing, themes, clipboard, emoji, settings UI | FlorisBoard (upstream commit `5d6e1ef`, 2026-08-21). Lives under `dev.patrickgold.florisboard`. |
 | AI writing tools in the keyboard: `app/src/main/kotlin/com/genkeyboard/` | GenKeyboard |
-| AI backend, a Cloudflare Worker that holds the LLM keys, applies prompt templates and enforces a per-device daily quota: `backend/` | GenKeyboard |
+| AI backend, a Cloudflare Worker that holds the LLM keys, applies prompt templates, spreads load across models by their daily free-tier budgets and keeps a hidden per-device abuse cap: `backend/` | GenKeyboard |
 | Branding, app id `com.genkeyboard.app`, GenKeyboard strings, this README, `PRIVACY.md` | GenKeyboard |
 
 The FlorisBoard copyright headers, `LICENSE` and `NOTICE` stay in place. Apache 2.0 allows this fork and asks for exactly that attribution. Thanks to the FlorisBoard project for the keyboard engine.

@@ -1,11 +1,17 @@
 import { buildMessages, cleanOutput, parseRequest, ValidationError } from "./actions";
+import { parseLimits, ProviderBudget } from "./budget";
 import { ProviderChain, providersFromEnv, type ProviderEnv } from "./providers";
 import { consumeQuota, type QuotaStore } from "./quota";
 
 export interface Env extends ProviderEnv {
   QUOTA: QuotaStore;
   PROVIDER_TIMEOUT_MS?: string;
-  FREE_DAILY_LIMIT?: string;
+  /** Hidden abuse cap per device. Never shown to users; only bites a runaway script. */
+  DEVICE_DAILY_LIMIT?: string;
+  /** Secret. Comma-separated device ids exempt from the cap (owner's phones). */
+  UNLIMITED_DEVICE_IDS?: string;
+  /** Per-provider daily budgets, e.g. "gemini=450,gemini_lite=0,openrouter=100". 0 = unlimited. */
+  PROVIDER_DAILY_LIMITS?: string;
   MAX_TEXT_CHARS?: string;
 }
 
@@ -43,19 +49,30 @@ async function handleTransform(req: Request, env: Env): Promise<Response> {
     throw e;
   }
 
-  const quota = await consumeQuota(env.QUOTA, deviceId, Number(env.FREE_DAILY_LIMIT ?? 50));
-  if (!quota.allowed) return error(429, "quota_exceeded", "daily limit reached");
+  // Owner/test devices listed in the UNLIMITED_DEVICE_IDS secret skip the abuse cap.
+  const unlimited = (env.UNLIMITED_DEVICE_IDS ?? "").toLowerCase().split(",").map((s) => s.trim());
+  if (!unlimited.includes(deviceId.toLowerCase())) {
+    const quota = await consumeQuota(env.QUOTA, deviceId, Number(env.DEVICE_DAILY_LIMIT ?? 500));
+    if (!quota.allowed) return error(429, "quota_exceeded", "daily limit reached");
+  }
 
   const providers = providersFromEnv(env);
   if (providers.length === 0) return error(503, "no_providers", "no provider configured");
 
   const timeoutMs = Number(env.PROVIDER_TIMEOUT_MS ?? 10000);
-  const chain = new ProviderChain(providers, (err) => console.warn("provider failed", err.message), timeoutMs);
+  const budget = new ProviderBudget(env.QUOTA, parseLimits(env.PROVIDER_DAILY_LIMITS));
+  const chain = new ProviderChain(
+    providers,
+    (err) => console.warn("provider failed", err.message),
+    timeoutMs,
+    budget,
+  );
   const signal = AbortSignal.timeout(timeoutMs * providers.length);
 
   try {
     const { text, provider } = await chain.completeWithSource(buildMessages(parsed), signal);
-    return json(200, { text: cleanOutput(text), provider, remaining: quota.remaining });
+    // No `remaining` in the response: capacity is managed server-side per model, users never see a counter.
+    return json(200, { text: cleanOutput(text), provider });
   } catch (e) {
     console.error("all providers failed", (e as Error).message);
     return error(502, "upstream_failed", "AI providers unavailable");
