@@ -128,6 +128,7 @@ export interface ProviderEnv {
   OPENAI_MODEL?: string;
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
+  GEMINI_FALLBACK_MODEL?: string;
   ANTHROPIC_API_KEY?: string;
   ANTHROPIC_MODEL?: string;
   OPENROUTER_API_KEY?: string;
@@ -150,6 +151,14 @@ const VENDORS: Record<string, VendorSpec> = {
     keyVar: "GEMINI_API_KEY",
     modelVar: "GEMINI_MODEL",
     // Gemini 3.x thinks before answering; low effort keeps a keyboard round trip in the ~2s range.
+    extraBody: { extra_body: { google: { thinking_config: { thinking_level: "minimal" } } } },
+  },
+  // Same key, second model. Free tier caps each model per day, so a second Gemini model doubles headroom
+  // before we fall through to a paid vendor.
+  gemini_lite: {
+    baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+    keyVar: "GEMINI_API_KEY",
+    modelVar: "GEMINI_FALLBACK_MODEL",
     extraBody: { extra_body: { google: { thinking_config: { thinking_level: "minimal" } } } },
   },
   anthropic: { baseUrl: "https://api.anthropic.com/v1", keyVar: "ANTHROPIC_API_KEY", modelVar: "ANTHROPIC_MODEL" },

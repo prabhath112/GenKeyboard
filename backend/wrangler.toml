@@ -10,11 +10,13 @@ preview_id = "14107cf722214a649e290c3169383b3a"
 
 [vars]
 # Fallback order. First healthy provider wins. Providers without a key are skipped.
-PROVIDER_ORDER = "xai,openai,gemini,anthropic,openrouter"
+PROVIDER_ORDER = "gemini,gemini_lite,xai,openai,anthropic,openrouter"
 # Model IDs. Verify against each vendor's current list before deploy.
 XAI_MODEL = "grok-4-fast"
 OPENAI_MODEL = "gpt-5-mini"
-GEMINI_MODEL = "gemini-3.6-flash"
+GEMINI_MODEL = "gemini-3.1-flash-lite"
+# Free tier: 3.1 flash lite = 500 req/day, 2.5 flash lite = unlimited/day (slower). 3.6 flash = 20/day, unusable.
+GEMINI_FALLBACK_MODEL = "gemini-2.5-flash-lite"
 ANTHROPIC_MODEL = "claude-haiku-4-5-20251001"
 OPENROUTER_MODEL = "x-ai/grok-4.3"
 # Per provider. Keep timeout x provider count under the app's 25s HTTP timeout.
