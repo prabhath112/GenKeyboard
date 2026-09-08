@@ -58,9 +58,31 @@ npm run deploy
 
 Release builds use `AI_BACKEND_URL` from `app/build.gradle.kts`. Point it at your deployed worker.
 
+## CI and releases
+
+[![CI](https://github.com/prabhath112/GenKeyboard/actions/workflows/ci.yml/badge.svg)](https://github.com/prabhath112/GenKeyboard/actions/workflows/ci.yml)
+
+- `CI` runs on every pull request and push to `main`: backend typecheck + tests, Android unit tests + debug APK.
+- `Release` runs when a tag `v*` is pushed: builds the signed AAB and APK, verifies the signature, publishes a GitHub Release with SHA256 sums. Tags containing `-` (like `v0.2.0-beta01`) are marked pre-release.
+
+```
+git tag v0.2.0 && git push origin v0.2.0
+```
+
 ## Release signing
 
-Copy `keystore.properties.example` to `keystore.properties`, generate a keystore as described inside, then `./gradlew :app:bundleRelease`. Both the keystore and the properties file are gitignored. Back them up outside the repo.
+Local: copy `keystore.properties.example` to `keystore.properties`, generate a keystore as described inside, then `./gradlew :app:bundleRelease`. Both files are gitignored. Back them up outside the repo.
+
+GitHub Actions needs the same material as repository secrets (Settings → Secrets and variables → Actions, or the `gh` CLI):
+
+```
+gh secret set KEYSTORE_BASE64 --body "$(base64 -w0 genkeyboard-release.jks)"
+gh secret set KEYSTORE_PASSWORD --body "<storePassword from keystore.properties>"
+gh secret set KEY_ALIAS --body "genkeyboard"
+gh secret set KEY_PASSWORD --body "<keyPassword from keystore.properties>"
+```
+
+LLM API keys are never GitHub secrets. They live only in Cloudflare: `wrangler secret put GEMINI_API_KEY` (and optionally `OPENROUTER_API_KEY`). CI runs the backend tests with mocked providers and needs no key.
 
 ## Secrets
 
