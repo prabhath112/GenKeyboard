@@ -26,6 +26,21 @@ class WordCompleterTest {
     }
 
     @Test
+    fun `autocorrects one-edit typos of common words, leaves known and unknown-looking words alone`() {
+        val dict = mapOf("hello" to 200, "help" to 250, "world" to 240, "their" to 200, "there" to 220, "rare" to 20)
+        WordCompleter.correct("helo", dict, emptyMap()) shouldBe "hello" // dropped double letter beats the more frequent "help"
+        WordCompleter.correct("Wrold", dict, emptyMap()) shouldBe "World" // transposition, keeps case
+        WordCompleter.correct("hellp", dict, emptyMap()) shouldBe "help" // one deletion, most frequent wins
+        WordCompleter.correct("hello", dict, emptyMap()) shouldBe null // already correct
+        WordCompleter.correct("Prabhath", dict, mapOf("Prabhath" to 96)) shouldBe null // learned
+        WordCompleter.correct("helo", dict, mapOf("helo" to 0)) shouldBe "hello" // blocked is not known
+        WordCompleter.correct("rae", dict, emptyMap()) shouldBe null // too short
+        WordCompleter.correct("rar", dict, emptyMap()) shouldBe null // too short
+        WordCompleter.correct("rarr", dict, emptyMap()) shouldBe null // candidate too rare
+        WordCompleter.correct("xyzzy", dict, emptyMap()) shouldBe null // nothing close
+    }
+
+    @Test
     fun `learns only real personal words`() {
         WordCompleter.shouldLearn("Prabhath", bundled) shouldBe true
         WordCompleter.shouldLearn("hello", bundled) shouldBe false // already bundled

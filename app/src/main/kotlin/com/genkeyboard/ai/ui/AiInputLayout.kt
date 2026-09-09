@@ -30,6 +30,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.CircularProgressIndicator
@@ -45,6 +46,8 @@ import com.genkeyboard.ai.domain.AiAction
 import com.genkeyboard.ai.domain.AiError
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.aiManager
+import dev.patrickgold.florisboard.app.FlorisPreferenceStore
+import dev.patrickgold.jetpref.datastore.model.collectAsState
 import dev.patrickgold.florisboard.ime.ImeUiMode
 import dev.patrickgold.florisboard.ime.keyboard.FlorisImeSizing
 import dev.patrickgold.florisboard.ime.theme.FlorisImeUi
@@ -183,6 +186,26 @@ private fun ActionCatalog(onRun: (AiAction) -> Unit) {
                     imageVector = Icons.Default.Translate,
                     text = language,
                 )
+            }
+        }
+
+        // User-defined instructions, edited under Settings > AI writing tools.
+        val prefs by FlorisPreferenceStore
+        val customPrompts by prefs.ai.customPrompts.collectAsState()
+        val prompts = customPrompts.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        SectionTitle(R.string.ai__section_my_prompts)
+        if (prompts.isEmpty()) {
+            SnyggText(elementName = Ui.Subheader, text = stringRes(R.string.ai__my_prompts_empty))
+        } else {
+            Row(modifier = Modifier.florisHorizontalScroll(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                prompts.forEach { prompt ->
+                    SnyggChip(
+                        elementName = Ui.Chip,
+                        onClick = { onRun(AiAction.Custom(prompt)) },
+                        imageVector = Icons.Default.AutoAwesome,
+                        text = prompt.take(28) + if (prompt.length > 28) "…" else "",
+                    )
+                }
             }
         }
         Spacer(Modifier.height(8.dp))

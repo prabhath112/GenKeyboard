@@ -81,6 +81,62 @@ object WordCompleter {
     /** Frequency bump for a learned word: new words start mid-range and climb with use. */
     fun nextFrequency(current: Int?): Int = if (current == null) 96 else minOf(255, current + 16)
 
+    /**
+     * Autocorrect. Returns the word the typed [word] most likely meant, or null when the word is known
+     * (bundled, learned or blocked) or no confident fix exists.
+     *
+     * Confident = one edit away (Damerau-Levenshtein, transposition counts as one), common in the bundled
+     * list, and the typed word is at least 4 letters. ponytail: full scan of the bundled map per call, only
+     * when the word is unknown; fine at ~50k words. Upgrade path: BK-tree or symspell if a bigger dictionary lands.
+     */
+    fun correct(word: String, bundled: Map<String, Int>, learned: Map<String, Int>): String? {
+        val w = word.lowercase()
+        if (w.length < 4 || w.any { !it.isLetter() && it != '\'' }) return null
+        // Known = bundled or actively learned. A blocked word (frequency 0) is not known; it may still be corrected.
+        if (w in bundled || learned.any { (k, f) -> f > BLOCKED && k.equals(w, ignoreCase = true) }) return null
+        var best: String? = null
+        var bestScore = MIN_CORRECTION_FREQ - 1
+        for ((candidate, freq) in bundled) {
+            if (freq < MIN_CORRECTION_FREQ) continue
+            if (kotlin.math.abs(candidate.length - w.length) > 1) continue
+            if (candidate.first() != w.first() && candidate.getOrNull(1) != w.first()) continue // cheap prefilter
+            if (!editDistance1(w, candidate)) continue
+            // A dropped double letter ("helo" -> "hello") is the most common slip; prefer it over a substitution.
+            val score = freq + if (candidate.length == w.length + 1 && hasDoubleLetter(candidate) && !hasDoubleLetter(w)) 60 else 0
+            if (score > bestScore) {
+                best = candidate
+                bestScore = score
+            }
+        }
+        return best?.let { matchCase(word, it) }
+    }
+
+    private fun hasDoubleLetter(s: String): Boolean = (1 until s.length).any { s[it] == s[it - 1] }
+
+    /** Frequency (0..255) a bundled word needs to be offered as an autocorrection. */
+    private const val MIN_CORRECTION_FREQ = 60
+
+    /** True when [a] and [b] differ by exactly one insertion, deletion, substitution or adjacent transposition. */
+    internal fun editDistance1(a: String, b: String): Boolean {
+        if (a == b) return false
+        val la = a.length
+        val lb = b.length
+        if (la == lb) {
+            var i = 0
+            while (i < la && a[i] == b[i]) i++
+            if (i == la) return false
+            // substitution
+            if (a.regionMatches(i + 1, b, i + 1, la - i - 1)) return true
+            // transposition
+            return i + 1 < la && a[i] == b[i + 1] && a[i + 1] == b[i] && a.regionMatches(i + 2, b, i + 2, la - i - 2)
+        }
+        val (short, long) = if (la < lb) a to b else b to a
+        if (long.length - short.length != 1) return false
+        var i = 0
+        while (i < short.length && short[i] == long[i]) i++
+        return short.regionMatches(i, long, i + 1, short.length - i)
+    }
+
     private fun matchCase(prefix: String, word: String): String = when {
         prefix.length > 1 && prefix.all { !it.isLetter() || it.isUpperCase() } -> word.uppercase()
         prefix.first().isUpperCase() -> word.replaceFirstChar { it.uppercase() }
