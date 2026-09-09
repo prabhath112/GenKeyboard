@@ -54,13 +54,23 @@ jobs:
           cp app/build/outputs/apk/release/app-release.apk "dist/GenKeyboard-${GITHUB_REF_NAME}.apk"
           (cd dist && sha256sum * > SHA256SUMS.txt)
 
+      - name: Release notes from CHANGELOG.md
+        # Uses the "## <version>" section matching the tag (v1.0.0 -> "## 1.0.0"); falls back to auto-notes.
+        run: |
+          ver="${GITHUB_REF_NAME#v}"
+          awk -v ver="$ver" '
+            /^## /{ if (found) exit; found = ($2 == ver); next }
+            found { print }
+          ' CHANGELOG.md > notes.md || true
+          if [ -s notes.md ]; then echo "NOTES=--notes-file notes.md" >> "$GITHUB_ENV"; else echo "NOTES=--generate-notes" >> "$GITHUB_ENV"; fi
+
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" dist/* \
-            --title "GenKeyboard $GITHUB_REF_NAME" \
-            --generate-notes \
+            --title "GenKeyboard ${GITHUB_REF_NAME#v}" \
+            $NOTES \
             $([[ "$GITHUB_REF_NAME" == *-* ]] && echo --prerelease)
 
       - name: Shred keystore
