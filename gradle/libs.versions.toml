@@ -20,7 +20,7 @@ kotlinx-coroutines = "1.10.2"
 kotlinx-serialization-json = "1.11.0"
 ksp = "2.3.11"
 material-kolor = "4.1.1"
-mikepenz-aboutlibraries = "14.0.1"
+mikepenz-aboutlibraries = "14.2.1"
 patrickgold-compose-tooltip = "0.2.0-rc02"
 patrickgold-jetpref = "0.3.0"
 
