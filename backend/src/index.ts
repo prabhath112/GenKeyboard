@@ -2,7 +2,7 @@ import { buildMessages, cleanOutput, parseRequest, ValidationError } from "./act
 import { alert } from "./alerts";
 import { parseLimits, ProviderBudget } from "./budget";
 import { ProviderChain, providersFromEnv, type ProviderEnv } from "./providers";
-import { consumeQuota, type QuotaStore } from "./quota";
+import { admitDevice, consumeQuota, type QuotaStore } from "./quota";
 
 export interface Env extends ProviderEnv {
   QUOTA: QuotaStore;
@@ -15,6 +15,11 @@ export interface Env extends ProviderEnv {
   PROVIDER_DAILY_LIMITS?: string;
   /** Secret. Discord webhook for operator alerts. Unset = alerts off. */
   DISCORD_WEBHOOK_URL?: string;
+  /**
+   * Closed-beta size: how many distinct devices may ever use the service. Set in the Cloudflare
+   * dashboard (Variables and Secrets) so it survives deploys; 0 = open to everyone. Default 5.
+   */
+  MAX_DEVICES?: string;
   MAX_TEXT_CHARS?: string;
 }
 
@@ -64,9 +69,14 @@ async function handleTransform(req: Request, env: Env, ctx: ExecutionContext): P
     throw e;
   }
 
-  // Owner/test devices listed in the UNLIMITED_DEVICE_IDS secret skip the abuse cap.
+  // Owner/test devices listed in the UNLIMITED_DEVICE_IDS secret skip the member limit and the abuse cap.
   const unlimited = (env.UNLIMITED_DEVICE_IDS ?? "").toLowerCase().split(",").map((s) => s.trim());
   if (!unlimited.includes(deviceId.toLowerCase())) {
+    if (!(await admitDevice(env.QUOTA, deviceId, Number(env.MAX_DEVICES ?? 5)))) {
+      ctx.waitUntil(alert(env, `device_limit:${deviceId}`, `New device ${deviceId.slice(0, 8)}… refused: member limit (${env.MAX_DEVICES ?? 5}) reached. Raise MAX_DEVICES in Cloudflare to admit more.`, DAY_SECONDS));
+      // 401 so the app shows its "device not authorized" message without an app update.
+      return error(401, "device_limit", "member limit reached");
+    }
     const quota = await consumeQuota(env.QUOTA, deviceId, Number(env.DEVICE_DAILY_LIMIT ?? 500));
     if (!quota.allowed) {
       ctx.waitUntil(alert(env, `cap:${deviceId}`, `Device ${deviceId.slice(0, 8)}… hit the daily cap (${env.DEVICE_DAILY_LIMIT ?? 500}). Possible abuse.`, DAY_SECONDS));
