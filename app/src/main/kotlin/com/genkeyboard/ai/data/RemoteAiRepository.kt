@@ -58,6 +58,8 @@ internal data class ErrorEnvelopeDto(val error: ErrorDto) {
 class RemoteAiRepository(
     private val transport: HttpTransport,
     private val config: suspend () -> AiBackendConfig,
+    /** Null when the build cannot attest; requests then carry only the device id. */
+    private val sessions: SessionProvider? = null,
 ) : AiRepository {
 
     private val json = Json {
@@ -70,10 +72,16 @@ class RemoteAiRepository(
         val cfg = config()
         val url = cfg.baseUrl.trimEnd('/') + TRANSFORM_PATH
         val body = json.encodeToString(TransformRequestDto.serializer(), action.toDto(text))
-        val headers = mapOf(HEADER_DEVICE_ID to cfg.deviceId)
 
         val response = try {
-            transport.post(url, headers, body)
+            val first = transport.post(url, headers(cfg, refresh = false), body)
+            // A cached session expires, or the backend gate gets switched on mid-session:
+            // re-attest once and retry before surfacing an error the user cannot act on.
+            if (sessions != null && first.needsAttestation()) {
+                transport.post(url, headers(cfg, refresh = true), body)
+            } else {
+                first
+            }
         } catch (_: SocketTimeoutException) {
             return AiResult.Failure(AiError.TIMEOUT)
         } catch (_: IOException) {
@@ -85,15 +93,24 @@ class RemoteAiRepository(
         return response.toResult()
     }
 
+    private suspend fun headers(cfg: AiBackendConfig, refresh: Boolean): Map<String, String> {
+        val base = mapOf(HEADER_DEVICE_ID to cfg.deviceId)
+        val session = sessions?.session(cfg.baseUrl, cfg.deviceId, refresh) ?: return base
+        return base + (HEADER_AUTHORIZATION to "Bearer $session")
+    }
+
+    private fun HttpResponse.needsAttestation(): Boolean = code == 401 && errorCode() == "attestation_required"
+
+    private fun HttpResponse.errorCode(): String? =
+        runCatching { json.decodeFromString(ErrorEnvelopeDto.serializer(), body).error.code }.getOrNull()
+
     private fun HttpResponse.toResult(): AiResult {
         if (code in 200..299) {
             return runCatching { json.decodeFromString(TransformResponseDto.serializer(), body) }
                 .map { AiResult.Success(it.text, it.provider, it.remaining) }
                 .getOrElse { AiResult.Failure(AiError.UPSTREAM) }
         }
-        val errorCode = runCatching { json.decodeFromString(ErrorEnvelopeDto.serializer(), body).error.code }
-            .getOrNull()
-        return AiResult.Failure(mapError(code, errorCode))
+        return AiResult.Failure(mapError(code, errorCode()))
     }
 
     private fun mapError(httpCode: Int, errorCode: String?): AiError = when {
@@ -107,6 +124,7 @@ class RemoteAiRepository(
     companion object {
         const val TRANSFORM_PATH = "/v1/transform"
         const val HEADER_DEVICE_ID = "X-Device-Id"
+        const val HEADER_AUTHORIZATION = "Authorization"
     }
 }
 

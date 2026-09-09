@@ -18,7 +18,9 @@ package com.genkeyboard.ai
 
 import android.content.Context
 import com.genkeyboard.ai.data.AiBackendConfig
+import com.genkeyboard.ai.data.PlayIntegrityTokenSource
 import com.genkeyboard.ai.data.RemoteAiRepository
+import com.genkeyboard.ai.data.SessionProvider
 import com.genkeyboard.ai.data.UrlConnectionTransport
 import com.genkeyboard.ai.domain.AiAction
 import com.genkeyboard.ai.domain.AiError
@@ -59,12 +61,7 @@ sealed interface AiPanelState {
 class AiManager(
     context: Context,
     private val gateway: TextEditorGateway = InputConnectionTextGateway(context),
-    private val useCase: TransformTextUseCase = TransformTextUseCase(
-        RemoteAiRepository(
-            transport = UrlConnectionTransport(allowCleartext = BuildConfig.DEBUG),
-            config = { backendConfig() },
-        ),
-    ),
+    private val useCase: TransformTextUseCase = TransformTextUseCase(defaultRepository(context)),
 ) {
     private val prefs by FlorisPreferenceStore
     private val editorInstance by context.editorInstance()
@@ -121,6 +118,23 @@ class AiManager(
     }
 
     companion object {
+        /**
+         * One transport shared by the transform and attestation calls.
+         * PLAY_CLOUD_PROJECT_NUMBER of 0 leaves attestation off, so debug and sideloaded builds
+         * keep working against a backend that has REQUIRE_ATTESTATION unset.
+         */
+        private fun defaultRepository(context: Context): RemoteAiRepository {
+            val transport = UrlConnectionTransport(allowCleartext = BuildConfig.DEBUG)
+            return RemoteAiRepository(
+                transport = transport,
+                config = { backendConfig() },
+                sessions = SessionProvider(
+                    transport = transport,
+                    tokenSource = PlayIntegrityTokenSource(context, BuildConfig.PLAY_CLOUD_PROJECT_NUMBER),
+                ),
+            )
+        }
+
         /** Device id doubles as the quota key. Generated once, never leaves the device except in our own requests. */
         suspend fun backendConfig(): AiBackendConfig {
             val prefs by FlorisPreferenceStore
