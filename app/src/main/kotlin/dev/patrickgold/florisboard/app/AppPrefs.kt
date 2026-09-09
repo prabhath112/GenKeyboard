@@ -70,6 +70,13 @@ import org.florisboard.lib.android.isOrientationPortrait
 
 val FlorisPreferenceStore = jetprefDataStoreOf(FlorisPreferenceModel::class)
 
+/** Starter set for the AI panel's "My prompts" chips. One prompt per line; the user edits the list in Settings. */
+const val DEFAULT_CUSTOM_PROMPTS =
+    "Turn this into three short bullet points\n" +
+    "Make it sound confident and clear\n" +
+    "Rewrite as a friendly text message\n" +
+    "Fix it and make it sound like a native speaker"
+
 @Preferences
 abstract class FlorisPreferenceModel : PreferenceModel() {
     companion object {
@@ -90,6 +97,11 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
         val deviceId = string(
             key = "ai__device_id",
             default = "",
+        )
+        /** User's saved custom instructions, one per line. Shown as chips in the AI panel ("My prompts"). */
+        val customPrompts = string(
+            key = "ai__custom_prompts",
+            default = DEFAULT_CUSTOM_PROMPTS,
         )
     }
 
@@ -178,6 +190,11 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
     inner class Correction {
         val autoCapitalization = boolean(
             key = "correction__auto_capitalization",
+            default = true,
+        )
+        /** Replace an unknown word with a common one-edit-away word on space. */
+        val autoCorrect = boolean(
+            key = "correction__auto_correct",
             default = true,
         )
         val autoSpacePunctuation = boolean(

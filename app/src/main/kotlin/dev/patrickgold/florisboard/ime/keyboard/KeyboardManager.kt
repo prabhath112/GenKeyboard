@@ -71,6 +71,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.florisboard.lib.android.AndroidKeyguardManager
@@ -606,9 +607,16 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
      * Handles a [KeyCode.TOGGLE_AUTOCORRECT] event.
      */
     private fun handleToggleAutocorrect() {
+        val enabled = !prefs.correction.autoCorrect.get()
+        // Synchronous so the smartbar icon, which recomposes right after this tap, reads the new value.
+        runBlocking { prefs.correction.autoCorrect.set(enabled) }
         lastToastReference.get()?.cancel()
         lastToastReference = WeakReference(
-            appContext.showLongToastSync("Autocorrect toggle is a placeholder and not yet implemented")
+            appContext.showLongToastSync(
+                appContext.getString(
+                    if (enabled) R.string.quick_action__autocorrect_on else R.string.quick_action__autocorrect_off,
+                ),
+            ),
         )
     }
 

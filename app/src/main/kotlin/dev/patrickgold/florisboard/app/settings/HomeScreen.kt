@@ -18,6 +18,7 @@ package dev.patrickgold.florisboard.app.settings
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.automirrored.outlined.Assignment
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Gesture
@@ -124,6 +125,11 @@ fun HomeScreen() = FlorisScreen {
             icon = Icons.Default.SmartButton,
             title = stringRes(R.string.settings__smartbar__title),
             onClick = { navController.navigate(Routes.Settings.Smartbar) },
+        )
+        Preference(
+            icon = Icons.Default.AutoAwesome,
+            title = stringRes(R.string.pref__ai__title),
+            onClick = { navController.navigate(Routes.Settings.Ai) },
         )
         Preference(
             icon = Icons.Default.Spellcheck,

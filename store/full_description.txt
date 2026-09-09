@@ -1,0 +1,31 @@
+GenKeyboard is an Android keyboard with AI writing tools built into the keyboard itself. Fix grammar, change the tone, shorten, expand, translate, summarize or draft a reply, in any app, without copying text anywhere.
+
+HOW IT WORKS
+Type as usual. Tap the sparkle in the top row, pick an action, review the result, then Replace or Discard. Nothing is inserted without you.
+
+AI WRITING TOOLS
+• Fix grammar and spelling
+• Change tone: professional, casual, polite, romantic, empathetic, funny, poetic, sarcastic, flirty, witty and more
+• Paraphrase, shorten, expand
+• Translate to any language
+• Smart reply: positive, neutral or negative answer to the message you received
+• Summarize, add emojis, humanize
+• Your own custom instruction
+
+Results read like a real person wrote them, not like a bot.
+
+A REAL KEYBOARD
+Built on the open-source FlorisBoard engine: fast typing, glide typing, word suggestions that learn your own words, themes, clipboard history, emoji, dozens of layouts and languages.
+
+PRIVACY FIRST
+• Everything you type stays on your phone. No keystroke logging, no ads, no account.
+• Text leaves your device only when you tap an AI action, and only that text. It goes over HTTPS to our server and to the AI provider, is processed, and is not stored.
+• Password fields are excluded from AI tools automatically.
+• Word suggestions and your personal dictionary live only on your device.
+
+Full privacy policy: https://github.com/prabhath112/GenKeyboard/blob/main/PRIVACY.md
+
+OPEN SOURCE
+GenKeyboard is open source (Apache 2.0) and a fork of FlorisBoard. Source, issues and releases: https://github.com/prabhath112/GenKeyboard
+
+Early access. AI features have a fair-use daily limit while the service is free.

@@ -17,7 +17,10 @@
 package dev.patrickgold.florisboard.ime.nlp.latin
 
 import android.content.Context
+import com.genkeyboard.suggest.NextWordModel
 import com.genkeyboard.suggest.WordCompleter
+import java.io.File
+import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.appContext
 import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.dictionary.DictionaryManager
@@ -43,6 +46,7 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         // Default user ID used for all subtypes, unless otherwise specified.
         // See `ime/core/Subtype.kt` Line 210 and 211 for the default usage
         const val ProviderId = "org.florisboard.nlp.providers.latin"
+        private val SENTENCE_END = setOf('.', '!', '?', '\n')
     }
 
     private val appContext by context.appContext()
@@ -73,6 +77,10 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         // The subtype we get here contains a lot of data, however we are only interested in subtype.primaryLocale and
         // subtype.secondaryLocales.
 
+        if (!nextWordsLoaded) {
+            nextWordsLoaded = true
+            runCatching { nextWords.load(nextWordsFile) }.onFailure { flogWarning { "nextword load failed: ${it.message}" } }
+        }
         wordData.withLock { wordData ->
             if (wordData.isEmpty()) {
                 // Here we use readText() because the test dictionary is a json dictionary
@@ -114,15 +122,31 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         val prefix = content.composingText.trim()
 
         // Word boundary: the word we were completing is gone from the composing region and sits committed
-        // before the cursor. Learn it, unless this is a private session.
+        // before the cursor. Learn it (and the bigram from the word before it), unless this is a private session.
         val previous = lastComposing
         lastComposing = prefix
-        if (prefix.isEmpty() && previous.isNotEmpty() && !isPrivateSession) {
-            val committed = content.textBeforeSelection.trimEnd { !it.isLetterOrDigit() && it != '\'' }
-            if (committed.endsWith(previous)) learn(subtype, previous)
-            return emptyList()
+        if (prefix.isEmpty()) {
+            val before = content.textBeforeSelection
+            val committed = before.trimEnd { !it.isLetterOrDigit() && it != '\'' }
+            if (previous.isNotEmpty() && committed.endsWith(previous)) {
+                if (!isPrivateSession) {
+                    // A brand-new word must be typed twice before it is learned, so a one-off typo (or a word the
+                    // user let autocorrect skip once) does not enter the personal dictionary. Tapping the word in
+                    // the suggestion row learns it immediately (notifySuggestionAccepted).
+                    val key = previous.lowercase()
+                    if (seenOnce.remove(key) || isKnown(previous)) learn(subtype, previous) else seenOnce.add(key)
+                    lastCommitted?.let { nextWords.learn(it, previous) }
+                    persistNextWords()
+                }
+                lastCommitted = previous
+            }
+            // Sentence end resets the context; a next-word guess after "." is noise.
+            if (before.trimEnd().lastOrNull() in SENTENCE_END) lastCommitted = null
+            val prev = lastCommitted ?: return emptyList()
+            return nextWords.predict(prev, minOf(3, maxCandidateCount)).map {
+                WordSuggestionCandidate(text = it, confidence = 0.5, isEligibleForAutoCommit = false, sourceProvider = this@LatinLanguageProvider)
+            }
         }
-        if (prefix.isEmpty()) return emptyList()
 
         val bundled = wordData.withLock { it.toMap() }
         val learned = withContext(Dispatchers.IO) {
@@ -134,7 +158,7 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
                     ?.associate { it.word to it.freq }
             }.getOrNull() ?: emptyMap()
         }
-        return WordCompleter.complete(prefix, bundled, learned, maxCandidateCount).map {
+        val completions = WordCompleter.complete(prefix, bundled, learned, maxCandidateCount).map {
             WordSuggestionCandidate(
                 text = it.word,
                 confidence = it.score,
@@ -142,10 +166,46 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
                 sourceProvider = this@LatinLanguageProvider,
             )
         }
+        // Autocorrect: an unknown word one edit away from a common word gets a candidate that the space key
+        // commits automatically. Backspace right after reverts it (FlorisBoard handles the revert).
+        val fix = if (prefs.correction.autoCorrect.get()) WordCompleter.correct(prefix, bundled, learned) else null
+        if (fix == null) return completions
+        val auto = WordSuggestionCandidate(text = fix, confidence = 1.0, isEligibleForAutoCommit = true, sourceProvider = this@LatinLanguageProvider)
+        // Keep the word as typed one tap away, so an intentional spelling survives the autocorrect.
+        val typed = WordSuggestionCandidate(text = prefix, confidence = 0.9, isEligibleForAutoCommit = false, isEligibleForUserRemoval = false, sourceProvider = this@LatinLanguageProvider)
+        return listOf(auto, typed) + completions.filterNot { it.text.toString().equals(fix, ignoreCase = true) }.take(maxOf(0, maxCandidateCount - 2))
     }
+
+    private val prefs by FlorisPreferenceStore
 
     /** Last non-empty composing prefix, used to detect that a word just got committed. */
     private var lastComposing: String = ""
+
+    /** Last committed word, the left context for next-word prediction. Null after sentence end. */
+    private var lastCommitted: String? = null
+
+    /** Unknown words typed once this session; typing one again learns it. ponytail: in-memory, resets on restart. */
+    private val seenOnce = LinkedHashSet<String>()
+
+    /** Already in the personal dictionary with a positive frequency (so a repeat use should bump it). */
+    private suspend fun isKnown(word: String): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            val manager = DictionaryManager.default()
+            manager.loadUserDictionariesIfNecessary()
+            manager.florisUserDictionaryDao()?.queryExact(word, null)?.any { it.freq > WordCompleter.BLOCKED } == true
+        }.getOrDefault(false)
+    }
+
+    private val nextWords = NextWordModel()
+    private var nextWordsLoaded = false
+    private var nextWordsDirty = 0
+    private val nextWordsFile get() = File(appContext.filesDir, "genkeyboard/nextword.json")
+
+    private fun persistNextWords() {
+        // ponytail: write every 5th learn; the file is a few KB. A lost handful of bigrams is harmless.
+        if (++nextWordsDirty % 5 != 0) return
+        runCatching { nextWords.save(nextWordsFile) }.onFailure { flogWarning { "nextword save failed: ${it.message}" } }
+    }
 
     /**
      * Add or bump a word in the user's personal dictionary so it is suggested next time. Words the bundled
@@ -190,6 +250,8 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         withContext(Dispatchers.IO) {
             val word = candidate.text.toString().trim()
             if (word.isEmpty()) return@withContext false
+            nextWords.forget(word)
+            runCatching { nextWords.save(nextWordsFile) }
             runCatching {
                 val manager = DictionaryManager.default()
                 manager.loadUserDictionariesIfNecessary()

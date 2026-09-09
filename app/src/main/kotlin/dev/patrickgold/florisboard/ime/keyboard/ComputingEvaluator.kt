@@ -35,6 +35,8 @@ import androidx.compose.material.icons.filled.ContentPasteGo
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.FontDownload
+import androidx.compose.material.icons.filled.FontDownloadOff
+import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.KeyboardCapslock
@@ -180,6 +182,9 @@ fun ComputingEvaluator.computeLabel(data: KeyData): String? {
     }
 }
 
+/** Read-only handle for the autocorrect quick-action icon; the toggle itself lives in KeyboardManager. */
+private val autoCorrectPrefs by FlorisPreferenceStore
+
 fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
     val evaluator = this
     return when (data.code) {
@@ -306,7 +311,7 @@ fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
             }
         }
         KeyCode.TOGGLE_AUTOCORRECT -> {
-            Icons.Default.FontDownload
+            if (autoCorrectPrefs.correction.autoCorrect.get()) Icons.Default.FontDownload else Icons.Default.FontDownloadOff
         }
         KeyCode.KANA_SWITCHER -> {
             if (evaluator.state.isKanaKata) {

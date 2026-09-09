@@ -30,10 +30,16 @@ function dayOf(d: Date): string {
 }
 
 async function bump(store: QuotaStore, key: string): Promise<number> {
-  const n = Number((await store.get(key)) ?? "0") + 1;
+  return bumpBy(store, key, 1);
+}
+
+async function bumpBy(store: QuotaStore, key: string, by: number): Promise<number> {
+  const n = Number((await store.get(key)) ?? "0") + by;
   await store.put(key, String(n), { expirationTtl: DAY_SECONDS * 2 });
   return n;
 }
+
+const ACTIONS = ["grammar", "tone", "paraphrase", "shorten", "expand", "translate", "reply", "summarize", "emojify", "humanize", "custom"];
 
 const DEVICE_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -104,9 +110,15 @@ async function handleTransform(req: Request, env: Env, ctx: ExecutionContext): P
   );
   const signal = AbortSignal.timeout(timeoutMs * providers.length);
 
-  ctx.waitUntil(bump(env.QUOTA, `req:${dayOf(new Date())}`));
+  const day = dayOf(new Date());
+  ctx.waitUntil(bump(env.QUOTA, `req:${day}`));
+  ctx.waitUntil(bump(env.QUOTA, `act:${parsed.action}:${day}`));
+  const started = Date.now();
   try {
     const { text, provider } = await chain.completeWithSource(buildMessages(parsed), signal);
+    // Latency sum + count feed the daily summary's average. ponytail: no percentiles; add a histogram if needed.
+    ctx.waitUntil(bump(env.QUOTA, `latn:${day}`));
+    ctx.waitUntil(bumpBy(env.QUOTA, `latms:${day}`, Date.now() - started));
     // No `remaining` in the response: capacity is managed server-side per model, users never see a counter.
     return json(200, { text: cleanOutput(text), provider });
   } catch (e) {
@@ -130,10 +142,21 @@ async function dailySummary(env: Env): Promise<void> {
   }
   const total = Number((await env.QUOTA.get(`req:${day}`)) ?? "0");
   const failed = Number((await env.QUOTA.get(`fail:${day}`)) ?? "0");
+  const latN = Number((await env.QUOTA.get(`latn:${day}`)) ?? "0");
+  const latMs = Number((await env.QUOTA.get(`latms:${day}`)) ?? "0");
+  const avg = latN > 0 ? `${(latMs / latN / 1000).toFixed(1)}s` : "n/a";
+  const actions: string[] = [];
+  for (const a of ACTIONS) {
+    const n = Number((await env.QUOTA.get(`act:${a}:${day}`)) ?? "0");
+    if (n > 0) actions.push(`${a} ${n}`);
+  }
+  actions.sort((x, y) => Number(y.split(" ")[1]) - Number(x.split(" ")[1]));
   await alert(
     env,
     `summary:${day}`,
-    `**GenKeyboard daily summary ${day}**\nRequests: ${total}  Failed: ${failed}\n${lines.join("\n") || "• no provider traffic"}`,
+    `**GenKeyboard daily summary ${day}**\nRequests: ${total}  Failed: ${failed}  Avg latency: ${avg}\n` +
+      `Top actions: ${actions.slice(0, 5).join(", ") || "none"}\n` +
+      `${lines.join("\n") || "• no provider traffic"}`,
     DAY_SECONDS,
   );
 }

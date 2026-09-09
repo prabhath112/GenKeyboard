@@ -59,4 +59,20 @@
     <string name="pref__ai__title">AI writing tools</string>
     <string name="pref__ai__enabled__label">Enable AI tools</string>
     <string name="pref__ai__backend_url__label">Backend URL</string>
+
+    <string name="quick_action__autocorrect_on">Autocorrect on</string>
+    <string name="quick_action__autocorrect_off">Autocorrect off</string>
+    <string name="pref__correction__auto_correct__label">Autocorrect</string>
+    <string name="pref__correction__auto_correct__summary">Fix obvious typos when you press space. Backspace right after to undo.</string>
+
+    <string name="ai__section_my_prompts">My prompts</string>
+    <string name="ai__my_prompts_empty">Add your own instructions under Settings › AI writing tools</string>
+    <string name="pref__ai__custom_prompts__title">My prompts</string>
+    <string name="pref__ai__custom_prompts__summary">Your own instructions, shown as chips in the AI panel. One per line.</string>
+    <string name="pref__ai__custom_prompts__add">Add prompt</string>
+    <string name="pref__ai__custom_prompts__edit">Edit prompt</string>
+    <string name="pref__ai__custom_prompts__hint">e.g. Turn this into three short bullet points</string>
+    <string name="pref__ai__custom_prompts__delete">Delete</string>
+    <string name="pref__ai__custom_prompts__reset">Restore defaults</string>
+    <string name="pref__ai__custom_prompts__none">No prompts yet. Tap + to add one.</string>
 </resources>
