@@ -73,6 +73,27 @@ jobs:
             $NOTES \
             $([[ "$GITHUB_REF_NAME" == *-* ]] && echo --prerelease)
 
+      - name: Create the release/<version> branch
+        # One immutable branch per release (repo ruleset blocks updates/deletion of release/**).
+        run: |
+          git push origin "HEAD:refs/heads/release/${GITHUB_REF_NAME#v}"
+
+      - name: Deploy the worker
+        # Production for the worker is "whatever was last released", so the deploy lives here, not in
+        # Cloudflare Workers Builds. Needs repo secrets CLOUDFLARE_API_TOKEN (Workers Scripts: Edit,
+        # Workers KV Storage: Edit) and CLOUDFLARE_ACCOUNT_ID. Skips with a notice until they exist.
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        working-directory: backend
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::notice::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID not set; worker not deployed. Run 'npm run deploy' from backend/ manually."
+            exit 0
+          fi
+          npm ci
+          npx wrangler deploy
+
       - name: Shred keystore
         if: always()
         run: rm -f genkeyboard-release.jks keystore.properties
