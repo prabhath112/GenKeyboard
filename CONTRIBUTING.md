@@ -30,6 +30,16 @@ cd backend && npm test
 
 Add a test when you change backend logic. One small check that fails if the logic breaks is enough.
 
+## Releases
+
+Branches: `main` is development; `release/<version>` (e.g. `release/1.0.0`, `release/2.0.0`) is one immutable branch per shipped version. Everything else is a short-lived PR branch.
+
+- Versions live in `gradle.properties` (`projectVersionName`, `projectVersionCode`). Bump both in a PR from a throwaway branch `bump/<version>` together with a new `## <version>` section at the top of `CHANGELOG.md`. The changelog section is the user-facing release note; write it for users, not developers.
+- After the PR merges, tag `main`: `git tag -a v<version> -m "GenKeyboard <version>" && git push origin v<version>`. The Release workflow then: builds the signed AAB/APK, publishes the GitHub Release with that changelog section, creates `release/<version>` at the tagged commit, and deploys the worker with `wrangler deploy` (repo secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`). Tags containing `-` (e.g. `v1.1.0-beta01`) are marked pre-release.
+- Nothing reaches users from `main`. Only a tag ships, and it ships app and worker together.
+- `release/**` branches are locked by a repository ruleset: no updates, no force-push, no deletion. They are snapshots, not work branches.
+- Hotfix for a shipped version while `main` has unreleased work: `git checkout -b hotfix/<version>.<patch> v<version>`, fix, PR into `main` if it applies there too, then tag `v<version>.<patch>` on the hotfix commit. The tag produces `release/<version>.<patch>` and deploys, exactly as above.
+
 ## Commit messages
 
 Short imperative subject, blank line, then the why. No secrets, no personal data.
