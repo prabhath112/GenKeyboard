@@ -26,14 +26,25 @@ DEVICE_DAILY_LIMIT = "500"
 PROVIDER_DAILY_LIMITS = "gemini:gemini-3.1-flash-lite=450,gemini:gemini-3.5-flash-lite=450,gemini:gemini-3.6-flash=18,openrouter=100"
 MAX_TEXT_CHARS = "4000"
 
+# Play Integrity. Must match the Play Console package name exactly; the .debug/.beta/.bench
+# build variants have suffixed ids and can never attest, so they need REQUIRE_ATTESTATION off.
+PLAY_PACKAGE_NAME = "com.genkeyboard.app"
+# Flip to "true" only once SESSION_SECRET and GOOGLE_SERVICE_ACCOUNT_JSON are set and a Play
+# build has been seen to attest. Until then /v1/transform keeps accepting X-Device-Id alone.
+REQUIRE_ATTESTATION = "false"
+# How long a device may transform before re-attesting.
+SESSION_TTL_SECONDS = "86400"
+
 # Secrets (never in this file). Set with: wrangler secret put <NAME>
 #   XAI_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY, OPENROUTER_API_KEY
+#   SESSION_SECRET             random 32+ bytes; rotating it logs every device out
+#   GOOGLE_SERVICE_ACCOUNT_JSON  service-account JSON with Play Integrity API access
 
-# Daily summary to Discord at 00:05 UTC (needs DISCORD_WEBHOOK_URL secret; no-op without it).
+# 00:05 UTC daily summary + top of every hour: hourly status, usage-spike and budget-80% alerts.
 [triggers]
-crons = ["5 0 * * *"]
+crons = ["5 0 * * *", "0 * * * *"]
 
-# Workers Logs in the dashboard (Observability tab). Free tier: 200k events/day.
+# Workers Logs off by owner request (no paid-tier features). Discord alerts cover monitoring; flip to true to debug.
 [observability]
-enabled = true
+enabled = false
 head_sampling_rate = 1

@@ -79,6 +79,9 @@ configure<ApplicationExtension> {
         buildConfigField("String", "BUILD_COMMIT_HASH", "\"${getGitCommitHash().get()}\"")
         buildConfigField("String", "FLADDONS_API_VERSION", "\"v~draft2\"")
         buildConfigField("String", "AI_BACKEND_URL", "\"https://genkeyboard-api.genkeyboard-api.workers.dev\"")
+        // Google Cloud project number linked to Play Console, needed by the Standard Integrity API.
+        // 0 disables attestation client-side; the backend then falls back to the device-id gate.
+        buildConfigField("long", "PLAY_CLOUD_PROJECT_NUMBER", "0L")
         buildConfigField("String", "FLADDONS_STORE_URL", "\"beta.addons.florisboard.org\"")
 
         sourceSets {
@@ -219,6 +222,9 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.window.core)
     implementation(libs.cache4k)
+    // Play Integrity attestation for the AI backend. Pulls in Google Play Services, which the
+    // bundle config above otherwise avoids; only release builds installed from Play can attest.
+    implementation(libs.google.play.integrity)
     implementation(libs.kotlin.reflect)
     implementation(libs.kotlinx.coroutines)
     implementation(libs.kotlinx.serialization.json)

@@ -15,6 +15,7 @@ androidx-room = "2.8.4"
 androidx-window = "1.5.1"
 cache4k = "0.14.0"
 coil = "3.5.0"
+google-play-integrity = "1.5.0"
 kotlin = "2.4.10"
 kotlinx-coroutines = "1.10.2"
 kotlinx-serialization-json = "1.11.0"
@@ -60,6 +61,7 @@ androidx-window-core = { module = "androidx.window:window-core", version.ref = "
 cache4k = { module = "io.github.reactivecircus.cache4k:cache4k", version.ref = "cache4k" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-gif = { module = "io.coil-kt.coil3:coil-gif", version.ref = "coil" }
+google-play-integrity = { module = "com.google.android.play:integrity", version.ref = "google-play-integrity" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
 kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization-json" }
