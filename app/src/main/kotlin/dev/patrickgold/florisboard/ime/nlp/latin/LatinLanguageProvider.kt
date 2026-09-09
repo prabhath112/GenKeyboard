@@ -17,14 +17,19 @@
 package dev.patrickgold.florisboard.ime.nlp.latin
 
 import android.content.Context
+import com.genkeyboard.suggest.WordCompleter
 import dev.patrickgold.florisboard.appContext
 import dev.patrickgold.florisboard.ime.core.Subtype
+import dev.patrickgold.florisboard.ime.dictionary.DictionaryManager
+import dev.patrickgold.florisboard.ime.dictionary.UserDictionaryEntry
 import dev.patrickgold.florisboard.ime.editor.EditorContent
 import dev.patrickgold.florisboard.ime.nlp.SpellingProvider
 import dev.patrickgold.florisboard.ime.nlp.SpellingResult
 import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidate
 import dev.patrickgold.florisboard.ime.nlp.SuggestionProvider
+import dev.patrickgold.florisboard.ime.nlp.WordSuggestionCandidate
 import dev.patrickgold.florisboard.lib.devtools.flogDebug
+import dev.patrickgold.florisboard.lib.devtools.flogWarning
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.MapSerializer
@@ -105,36 +110,102 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         allowPossiblyOffensive: Boolean,
         isPrivateSession: Boolean,
     ): List<SuggestionCandidate> {
-        return emptyList()
-        /*val word = content.composingText.ifBlank { "next" }
-        val suggestions = buildList {
-            for (n in 0 until maxCandidateCount) {
-                add(WordSuggestionCandidate(
-                    text = "$word$n",
-                    secondaryText = if (n % 2 == 1) "secondary" else null,
-                    confidence = 0.5,
-                    isEligibleForAutoCommit = false,//n == 0 && word.startsWith("auto"),
-                    // We set ourselves as the source provider so we can get notify events for our candidate
-                    sourceProvider = this@LatinLanguageProvider,
-                ))
-            }
+        preload(subtype)
+        val prefix = content.composingText.trim()
+
+        // Word boundary: the word we were completing is gone from the composing region and sits committed
+        // before the cursor. Learn it, unless this is a private session.
+        val previous = lastComposing
+        lastComposing = prefix
+        if (prefix.isEmpty() && previous.isNotEmpty() && !isPrivateSession) {
+            val committed = content.textBeforeSelection.trimEnd { !it.isLetterOrDigit() && it != '\'' }
+            if (committed.endsWith(previous)) learn(subtype, previous)
+            return emptyList()
         }
-        return suggestions*/
+        if (prefix.isEmpty()) return emptyList()
+
+        val bundled = wordData.withLock { it.toMap() }
+        val learned = withContext(Dispatchers.IO) {
+            runCatching {
+                val manager = DictionaryManager.default()
+                manager.loadUserDictionariesIfNecessary() // no-op once open; without it the DAO is null in a fresh process
+                manager.florisUserDictionaryDao()
+                    ?.query(prefix, subtype.primaryLocale)
+                    ?.associate { it.word to it.freq }
+            }.getOrNull() ?: emptyMap()
+        }
+        return WordCompleter.complete(prefix, bundled, learned, maxCandidateCount).map {
+            WordSuggestionCandidate(
+                text = it.word,
+                confidence = it.score,
+                isEligibleForAutoCommit = false,
+                sourceProvider = this@LatinLanguageProvider,
+            )
+        }
+    }
+
+    /** Last non-empty composing prefix, used to detect that a word just got committed. */
+    private var lastComposing: String = ""
+
+    /**
+     * Add or bump a word in the user's personal dictionary so it is suggested next time. Words the bundled
+     * dictionary already knows are skipped, so the personal list only holds the user's own vocabulary.
+     */
+    private suspend fun learn(subtype: Subtype, word: String) = withContext(Dispatchers.IO) {
+        val bundled = wordData.withLock { it }
+        if (!WordCompleter.shouldLearn(word, bundled)) return@withContext
+        runCatching {
+            val manager = DictionaryManager.default()
+            manager.loadUserDictionariesIfNecessary()
+            val dao = manager.florisUserDictionaryDao() ?: return@withContext
+            // No locale: names and personal words are language-independent, and a null locale matches every
+            // subtype in the DAO's LOCALE_MATCHES clause. (Room stores locales as "en_US"; do not hand-format.)
+            val existing = dao.queryExact(word, null).firstOrNull()
+            if (existing == null) {
+                dao.insert(UserDictionaryEntry(0, word, WordCompleter.nextFrequency(null), null, null))
+            } else if (existing.freq <= WordCompleter.BLOCKED) {
+                // User removed this word on purpose; typing it again must not resurrect it.
+                return@withContext
+            } else {
+                dao.update(existing.copy(freq = WordCompleter.nextFrequency(existing.freq)))
+            }
+        }.onFailure { flogWarning { "learn '$word' failed: ${it.message}" } }
     }
 
     override suspend fun notifySuggestionAccepted(subtype: Subtype, candidate: SuggestionCandidate) {
-        // We can use flogDebug, flogInfo, flogWarning and flogError for debug logging, which is a wrapper for Logcat
-        flogDebug { candidate.toString() }
+        // Picking a suggestion counts as using the word; bump it so it ranks higher next time.
+        lastComposing = ""
+        learn(subtype, candidate.text.toString())
     }
 
     override suspend fun notifySuggestionReverted(subtype: Subtype, candidate: SuggestionCandidate) {
         flogDebug { candidate.toString() }
     }
 
-    override suspend fun removeSuggestion(subtype: Subtype, candidate: SuggestionCandidate): Boolean {
-        flogDebug { candidate.toString() }
-        return false
-    }
+    /**
+     * Long-press on a suggestion. Blocks the word: it gets frequency 0 in the personal dictionary, so it is
+     * neither suggested nor re-learned. Unblock by deleting the row in Settings > Typing > Dictionary.
+     */
+    override suspend fun removeSuggestion(subtype: Subtype, candidate: SuggestionCandidate): Boolean =
+        withContext(Dispatchers.IO) {
+            val word = candidate.text.toString().trim()
+            if (word.isEmpty()) return@withContext false
+            runCatching {
+                val manager = DictionaryManager.default()
+                manager.loadUserDictionariesIfNecessary()
+                val dao = manager.florisUserDictionaryDao() ?: return@withContext false
+                val rows = dao.queryExact(word, null) + dao.queryExact(word.lowercase(), null)
+                if (rows.isEmpty()) {
+                    dao.insert(UserDictionaryEntry(0, word.lowercase(), WordCompleter.BLOCKED, null, null))
+                } else {
+                    for (row in rows.distinctBy { it.id }) dao.update(row.copy(freq = WordCompleter.BLOCKED))
+                }
+                true
+            }.getOrElse {
+                flogWarning { "block '$word' failed: ${it.message}" }
+                false
+            }
+        }
 
     override suspend fun getListOfWords(subtype: Subtype): List<String> {
         return wordData.withLock { it.keys.toList() }

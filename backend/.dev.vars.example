@@ -8,3 +8,5 @@ OPENROUTER_API_KEY=
 UNLIMITED_DEVICE_IDS=
 # Discord webhook for operator alerts (failures, parked models, daily summary). Empty = alerts off.
 DISCORD_WEBHOOK_URL=
+# Closed-beta member limit: distinct devices ever admitted. 0 = unlimited. Change in Cloudflare dashboard for prod.
+MAX_DEVICES=5

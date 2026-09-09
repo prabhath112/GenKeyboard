@@ -32,3 +32,8 @@ MAX_TEXT_CHARS = "4000"
 # Daily summary to Discord at 00:05 UTC (needs DISCORD_WEBHOOK_URL secret; no-op without it).
 [triggers]
 crons = ["5 0 * * *"]
+
+# Workers Logs in the dashboard (Observability tab). Free tier: 200k events/day.
+[observability]
+enabled = true
+head_sampling_rate = 1
