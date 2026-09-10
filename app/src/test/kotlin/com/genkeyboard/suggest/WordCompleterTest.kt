@@ -41,6 +41,42 @@ class WordCompleterTest {
     }
 
     @Test
+    fun `autocorrects a wrong first letter, the most common real typing mistake`() {
+        val dict = mapOf("world" to 240, "hello" to 200)
+        // Adjacent-key miss on a QWERTY layout: 'q' next to 'w', 'e' next to 'w'.
+        WordCompleter.correct("qorld", dict, emptyMap()) shouldBe "world" // substitution at position 0
+        WordCompleter.correct("Qorld", dict, emptyMap()) shouldBe "World" // keeps case
+        WordCompleter.correct("eworld", dict, emptyMap()) shouldBe "world" // extra leading letter
+        WordCompleter.correct("orld", dict, emptyMap()) shouldBe "world" // missing first letter
+    }
+
+    @Test
+    fun `suggests near-miss completions when the wrong first letter makes prefix matching useless`() {
+        val dict = mapOf("world" to 240)
+        // Nothing in the dictionary starts with "qorld", so plain prefix completion finds nothing;
+        // this is exactly what a person sees after fat-fingering the first key of a finished word.
+        WordCompleter.complete("qorld", dict, emptyMap(), 5).map { it.word } shouldBe listOf("world")
+
+        // Two real words can be one substitution away from the same wrong first letter; both should
+        // show up, most frequent first, same as multi-candidate autocorrect already behaves elsewhere.
+        val twoCandidates = mapOf("word" to 200, "cord" to 100)
+        WordCompleter.complete("qord", twoCandidates, emptyMap(), 5).map { it.word } shouldBe listOf("word", "cord")
+    }
+
+    @Test
+    fun `fuzzy completion never resurrects a word the user blocked`() {
+        val dict = mapOf("world" to 240)
+        WordCompleter.complete("qorld", dict, mapOf("world" to 0), 5) shouldBe emptyList()
+    }
+
+    @Test
+    fun `a real prefix match always wins over a fuzzy near-miss`() {
+        val dict = mapOf("world" to 240, "worry" to 100)
+        // "wor" is a genuine prefix of real words, so the fuzzy fallback must never even run here.
+        WordCompleter.complete("wor", dict, emptyMap(), 5).map { it.word } shouldBe listOf("world", "worry")
+    }
+
+    @Test
     fun `learns only real personal words`() {
         WordCompleter.shouldLearn("Prabhath", bundled) shouldBe true
         WordCompleter.shouldLearn("hello", bundled) shouldBe false // already bundled

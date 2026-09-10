@@ -5,6 +5,16 @@ All notable changes to GenKeyboard. Release notes on GitHub are taken from this 
 ## 1.0.1 — 2026-09-10
 
 ### Fixed
+- No word suggestions or autocorrect in Instagram's message box. Instagram marks that field
+  "no suggestions" (it has its own @mention/emoji autocomplete), and GenKeyboard was honoring
+  that the same way every other keyboard does. Now overridden so GenKeyboard's own suggestions
+  and autocorrect work there too. Password fields are unaffected.
+- Autocorrect and word suggestions did nothing when the wrong letter was the *first* one
+  (e.g. "qorld"), even though the rest of the word was typed correctly. Autocorrect had a
+  filter that specifically excluded first-letter mistakes; suggestions were prefix-only, so a
+  wrong first letter meant no dictionary word could ever match. Both now also fall back to
+  finding the closest real word when nothing matches, without resurrecting a word you've
+  blocked.
 - Word suggestions could silently stop working until the keyboard was restarted, with no
   indication why. A local diagnostics log now records suggestion pipeline errors so this can
   be tracked down from a device that hit it: `adb shell run-as com.genkeyboard.app cat files/genkeyboard/suggestion-diagnostics.log`

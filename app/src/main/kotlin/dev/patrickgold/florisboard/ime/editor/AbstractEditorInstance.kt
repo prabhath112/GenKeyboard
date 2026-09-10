@@ -291,7 +291,11 @@ abstract class AbstractEditorInstance(context: Context) {
     abstract fun determineComposer(composerName: ExtensionComponentName): Composer
 
     protected open fun shouldDetermineComposingRegion(editorInfo: FlorisEditorInfo): Boolean {
-        return editorInfo.isRichInputEditor && !editorInfo.inputAttributes.flagTextNoSuggestions
+        // Deliberately ignoring flagTextNoSuggestions: apps like Instagram set it on message fields to
+        // avoid the OS suggestion strip clashing with their own @mention/emoji autocomplete, but that also
+        // disables GenKeyboard's word completion and autocorrect there. Password fields are unaffected;
+        // they are gated separately via KeyVariation.PASSWORD in EditorInstance.handleStartInputView.
+        return editorInfo.isRichInputEditor
     }
 
     private suspend fun determineLocalComposing(

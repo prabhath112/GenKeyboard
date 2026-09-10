@@ -30,6 +30,9 @@ object WordCompleter {
     /** Personal-dictionary frequency that marks a word as blocked from suggestions. */
     const val BLOCKED = 0
 
+    /** Below this length, a short string is more likely a real short word than a typo of a longer one. */
+    private const val MIN_TYPO_WORD_LENGTH = 4
+
     /**
      * @param prefix what the user has typed so far in the current word
      * @param bundled word -> frequency 0..255 from the shipped dictionary
@@ -58,6 +61,18 @@ object WordCompleter {
             if (word.length > key.length && word.startsWith(key)) {
                 val w = word.lowercase()
                 if (w !in out && w !in blocked) out[w] = freq / 255.0
+            }
+        }
+
+        // Prefix matching cannot help once the first letter itself is wrong (no word starts with "qorld").
+        // Once the word looks finished, fall back to near-miss matches so a typo still gets suggestions.
+        if (out.isEmpty() && key.length >= MIN_TYPO_WORD_LENGTH) {
+            for ((word, freq) in bundled) {
+                if (freq < MIN_CORRECTION_FREQ) continue
+                if (word.lowercase() in blocked) continue
+                if (kotlin.math.abs(word.length - key.length) > 1) continue
+                if (!editDistance1(key, word)) continue
+                out[word] = freq / 255.0
             }
         }
 
@@ -91,7 +106,7 @@ object WordCompleter {
      */
     fun correct(word: String, bundled: Map<String, Int>, learned: Map<String, Int>): String? {
         val w = word.lowercase()
-        if (w.length < 4 || w.any { !it.isLetter() && it != '\'' }) return null
+        if (w.length < MIN_TYPO_WORD_LENGTH || w.any { !it.isLetter() && it != '\'' }) return null
         // Known = bundled or actively learned. A blocked word (frequency 0) is not known; it may still be corrected.
         if (w in bundled || learned.any { (k, f) -> f > BLOCKED && k.equals(w, ignoreCase = true) }) return null
         var best: String? = null
@@ -99,7 +114,6 @@ object WordCompleter {
         for ((candidate, freq) in bundled) {
             if (freq < MIN_CORRECTION_FREQ) continue
             if (kotlin.math.abs(candidate.length - w.length) > 1) continue
-            if (candidate.first() != w.first() && candidate.getOrNull(1) != w.first()) continue // cheap prefilter
             if (!editDistance1(w, candidate)) continue
             // A dropped double letter ("helo" -> "hello") is the most common slip; prefer it over a substitution.
             val score = freq + if (candidate.length == w.length + 1 && hasDoubleLetter(candidate) && !hasDoubleLetter(w)) 60 else 0
