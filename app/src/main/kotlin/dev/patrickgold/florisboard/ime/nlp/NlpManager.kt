@@ -19,7 +19,9 @@ package dev.patrickgold.florisboard.ime.nlp
 import android.content.Context
 import android.os.SystemClock
 import android.util.LruCache
+import com.genkeyboard.diagnostics.SuggestionDiagnostics
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
+import dev.patrickgold.florisboard.appContext
 import dev.patrickgold.florisboard.clipboardManager
 import dev.patrickgold.florisboard.editorInstance
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
@@ -33,6 +35,7 @@ import dev.patrickgold.florisboard.ime.nlp.latin.LatinLanguageProvider
 import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.lib.util.NetworkUtils
 import dev.patrickgold.florisboard.subtypeManager
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -54,6 +57,7 @@ class NlpManager(context: Context) {
     private val blankStrRegex = Regex(BLANK_STR_PATTERN)
 
     private val prefs by FlorisPreferenceStore
+    private val appContext by context.appContext()
     private val clipboardManager by context.clipboardManager()
     private val editorInstance by context.editorInstance()
     private val keyboardManager by context.keyboardManager()
@@ -137,14 +141,22 @@ class NlpManager(context: Context) {
 
     fun preload(subtype: Subtype) {
         scope.launch {
-            emojiSuggestionProvider.preload(subtype)
-            providers.withLock { providers ->
-                subtype.nlpProviders.forEach { _, providerId ->
-                    providers[providerId]?.let { provider ->
-                        provider.createIfNecessary()
-                        provider.preload(subtype)
+            try {
+                emojiSuggestionProvider.preload(subtype)
+                providers.withLock { providers ->
+                    subtype.nlpProviders.forEach { _, providerId ->
+                        providers[providerId]?.let { provider ->
+                            provider.createIfNecessary()
+                            provider.preload(subtype)
+                        }
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // A failed preload can leave a provider without its dictionary for the rest of the
+                // session, which looks like "suggestions just stopped working" to the user.
+                SuggestionDiagnostics.logError(appContext, "preload", e, "locale=${subtype.primaryLocale}")
             }
         }
     }
@@ -196,39 +208,52 @@ class NlpManager(context: Context) {
     fun suggest(subtype: Subtype, content: EditorContent) {
         val reqTime = SystemClock.uptimeMillis()
         scope.launch {
-            val emojiSuggestions = when {
-                prefs.emoji.suggestionEnabled.get() -> {
-                    emojiSuggestionProvider.suggest(
-                        subtype = subtype,
-                        content = content,
-                        maxCandidateCount = prefs.emoji.suggestionCandidateMaxCount.get(),
-                        allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
-                        isPrivateSession = keyboardManager.activeState.isIncognitoMode,
-                    )
+            try {
+                val emojiSuggestions = when {
+                    prefs.emoji.suggestionEnabled.get() -> {
+                        emojiSuggestionProvider.suggest(
+                            subtype = subtype,
+                            content = content,
+                            maxCandidateCount = prefs.emoji.suggestionCandidateMaxCount.get(),
+                            allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
+                            isPrivateSession = keyboardManager.activeState.isIncognitoMode,
+                        )
+                    }
+                    else -> emptyList()
                 }
-                else -> emptyList()
-            }
-            val suggestions = when {
-                emojiSuggestions.isNotEmpty() && prefs.emoji.suggestionType.get().prefix.isNotEmpty() -> {
-                    emptyList()
-                }
-                else -> {
-                    getSuggestionProvider(subtype).suggest(
-                        subtype = subtype,
-                        content = content,
-                        maxCandidateCount = 8,
-                        allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
-                        isPrivateSession = keyboardManager.activeState.isIncognitoMode,
-                    )
-                }
-            }
-            internalSuggestionsGuard.withLock {
-                if (internalSuggestions.first < reqTime) {
-                    internalSuggestions = reqTime to buildList {
-                        addAll(emojiSuggestions)
-                        addAll(suggestions)
+                val suggestions = when {
+                    emojiSuggestions.isNotEmpty() && prefs.emoji.suggestionType.get().prefix.isNotEmpty() -> {
+                        emptyList()
+                    }
+                    else -> {
+                        getSuggestionProvider(subtype).suggest(
+                            subtype = subtype,
+                            content = content,
+                            maxCandidateCount = 8,
+                            allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
+                            isPrivateSession = keyboardManager.activeState.isIncognitoMode,
+                        )
                     }
                 }
+                internalSuggestionsGuard.withLock {
+                    if (internalSuggestions.first < reqTime) {
+                        internalSuggestions = reqTime to buildList {
+                            addAll(emojiSuggestions)
+                            addAll(suggestions)
+                        }
+                    }
+                }
+                SuggestionDiagnostics.logOk(
+                    appContext, "suggest",
+                    "provider=${subtype.nlpProviders.suggestion} candidates=${emojiSuggestions.size + suggestions.size} " +
+                        "ms=${SystemClock.uptimeMillis() - reqTime}",
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Left uncaught, this silently kills the request: internalSuggestions never updates and the
+                // smartbar just stops offering anything, with nothing in logcat to explain why.
+                SuggestionDiagnostics.logError(appContext, "suggest", e, "provider=${subtype.nlpProviders.suggestion}")
             }
         }
     }
@@ -276,26 +301,32 @@ class NlpManager(context: Context) {
 
     private fun assembleCandidates() {
         runBlocking {
-            val candidates = when {
-                isSuggestionOn() -> {
-                    clipboardSuggestionProvider.suggest(
-                        subtype = Subtype.DEFAULT,
-                        content = editorInstance.activeContent,
-                        maxCandidateCount = 8,
-                        allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
-                        isPrivateSession = keyboardManager.activeState.isIncognitoMode,
-                    ).ifEmpty {
-                        buildList {
-                            internalSuggestionsGuard.withLock {
-                                addAll(internalSuggestions.second)
+            try {
+                val candidates = when {
+                    isSuggestionOn() -> {
+                        clipboardSuggestionProvider.suggest(
+                            subtype = Subtype.DEFAULT,
+                            content = editorInstance.activeContent,
+                            maxCandidateCount = 8,
+                            allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
+                            isPrivateSession = keyboardManager.activeState.isIncognitoMode,
+                        ).ifEmpty {
+                            buildList {
+                                internalSuggestionsGuard.withLock {
+                                    addAll(internalSuggestions.second)
+                                }
                             }
                         }
                     }
+                    else -> emptyList()
                 }
-                else -> emptyList()
+                activeCandidates = candidates
+                autoExpandCollapseSmartbarActions(candidates, NlpInlineAutofill.suggestions.value)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                SuggestionDiagnostics.logError(appContext, "assembleCandidates", e)
             }
-            activeCandidates = candidates
-            autoExpandCollapseSmartbarActions(candidates, NlpInlineAutofill.suggestions.value)
         }
     }
 

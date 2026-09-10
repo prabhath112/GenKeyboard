@@ -2,6 +2,13 @@
 
 All notable changes to GenKeyboard. Release notes on GitHub are taken from this file.
 
+## 1.0.1 — 2026-09-10
+
+### Fixed
+- Word suggestions could silently stop working until the keyboard was restarted, with no
+  indication why. A local diagnostics log now records suggestion pipeline errors so this can
+  be tracked down from a device that hit it: `adb shell run-as com.genkeyboard.app cat files/genkeyboard/suggestion-diagnostics.log`
+
 ## 1.0.0 — 2026-09-09
 
 GenKeyboard is an Android keyboard with AI writing tools built in. It is based on the open-source [FlorisBoard](https://github.com/florisboard/florisboard) keyboard engine (Apache 2.0) and adds an AI layer on top.

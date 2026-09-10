@@ -17,6 +17,7 @@
 package dev.patrickgold.florisboard.ime.nlp.latin
 
 import android.content.Context
+import com.genkeyboard.diagnostics.SuggestionDiagnostics
 import com.genkeyboard.suggest.NextWordModel
 import com.genkeyboard.suggest.WordCompleter
 import java.io.File
@@ -83,10 +84,16 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         }
         wordData.withLock { wordData ->
             if (wordData.isEmpty()) {
-                // Here we use readText() because the test dictionary is a json dictionary
-                val rawData = appContext.assets.readText("ime/dict/data.json")
-                val jsonData = Json.decodeFromString(wordDataSerializer, rawData)
-                wordData.putAll(jsonData)
+                // A failure here (corrupt/missing asset) used to propagate up and silently kill this
+                // preload's coroutine, leaving the bundled dictionary empty for the rest of the session.
+                runCatching {
+                    // Here we use readText() because the test dictionary is a json dictionary
+                    val rawData = appContext.assets.readText("ime/dict/data.json")
+                    val jsonData = Json.decodeFromString(wordDataSerializer, rawData)
+                    wordData.putAll(jsonData)
+                }.onFailure {
+                    SuggestionDiagnostics.logError(appContext, "latin.preload", it, "locale=${subtype.primaryLocale}")
+                }
             }
         }
     }
