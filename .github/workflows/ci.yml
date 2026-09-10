@@ -27,6 +27,10 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
+      - name: Vulnerability scan (fails on high/critical)
+        run: npm audit --audit-level=high
+      - name: Package integrity/provenance scan
+        run: npm audit signatures
       - run: npm run typecheck
       - run: npm test
 
