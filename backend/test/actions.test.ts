@@ -50,3 +50,35 @@ describe("cleanOutput", () => {
     expect(cleanOutput("Open 9–17 today")).toBe("Open 9-17 today");
   });
 });
+
+describe("cleanOutput filler words", () => {
+  it("drops a leading filler and recapitalises", () => {
+    expect(cleanOutput("Honestly, it works fine.", "paraphrase")).toBe("It works fine.");
+    expect(cleanOutput("Done. To be honest, I liked it.", "reply")).toBe("Done. I liked it.");
+  });
+  it("drops fillers inside a sentence", () => {
+    expect(cleanOutput("I honestly think so.", "tone")).toBe("I think so.");
+    expect(cleanOutput("It was, honestly, fine.", "expand")).toBe("It was, fine.");
+    expect(cleanOutput("That is truly and genuinely great.", "humanize")).toBe("That is and great.");
+  });
+  it("leaves the user's own wording alone for grammar and translate", () => {
+    expect(cleanOutput("Honestly, it works.", "grammar")).toBe("Honestly, it works.");
+    expect(cleanOutput("Honestly, it works.", "translate")).toBe("Honestly, it works.");
+  });
+  it("does not touch words that only contain a filler", () => {
+    expect(cleanOutput("Untruly is not a word, actuality is.", "paraphrase")).toBe("Untruly is not a word, actuality is.");
+  });
+  it("normalises curly quotes inside the text", () => {
+    expect(cleanOutput("It’s “fine” now", "paraphrase")).toBe('It\'s "fine" now');
+  });
+});
+
+describe("humanize style prompt", () => {
+  it("bans filler and AI vocabulary in every action's system prompt", () => {
+    const msgs = buildMessages(parseRequest({ action: "grammar", text: "hi" }, 4000));
+    const system = msgs[0].content;
+    expect(system).toContain("honestly");
+    expect(system).toContain("delve");
+    expect(system).toContain("never overriding it");
+  });
+});

@@ -37,13 +37,12 @@
     <string name="ai__reply_negative">Negative reply</string>
 
     <string name="ai__status_working">Rewriting…</string>
-    <string name="ai__status_applied">Text replaced</string>
+    <string name="ai__status_refining">Next action applies to this result</string>
     <string name="ai__status_remaining">{count} left today</string>
 
     <string name="ai__button_replace">Replace</string>
     <string name="ai__button_discard">Discard</string>
-    <string name="ai__button_undo">Undo</string>
-    <string name="ai__button_done">Done</string>
+    <string name="ai__button_add_filter">Add filter</string>
     <string name="ai__button_cancel">Cancel</string>
 
     <string name="ai__error_no_text">Type or select some text first.</string>
@@ -66,7 +65,9 @@
     <string name="pref__correction__auto_correct__summary">Fix obvious typos when you press space. Backspace right after to undo.</string>
 
     <string name="ai__section_my_prompts">My prompts</string>
-    <string name="ai__my_prompts_empty">Add your own instructions under Settings › AI writing tools</string>
+    <string name="ai__my_prompts_empty">Tap New prompt to write your own instruction</string>
+    <string name="ai__prompt_bar_hint">Type your instruction, then tap the tick</string>
+    <string name="ai__button_new_prompt">New prompt</string>
     <string name="pref__ai__custom_prompts__title">My prompts</string>
     <string name="pref__ai__custom_prompts__summary">Your own instructions, shown as chips in the AI panel. One per line.</string>
     <string name="pref__ai__custom_prompts__add">Add prompt</string>
