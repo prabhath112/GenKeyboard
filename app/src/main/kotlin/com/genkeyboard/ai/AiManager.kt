@@ -50,7 +50,8 @@ sealed interface AiPanelState {
     data object Idle : AiPanelState
     data class Loading(val action: AiAction) : AiPanelState
     data class Preview(val action: AiAction, val original: TextTarget, val result: AiResult.Success) : AiPanelState
-    data class Applied(val action: AiAction, val original: TextTarget, val applied: TextTarget) : AiPanelState
+    /** A previewed result the user chose to refine: [text] becomes the input of the next action, [original] is still what Replace overwrites. */
+    data class Refine(val original: TextTarget, val text: String) : AiPanelState
     data class Error(val error: AiError) : AiPanelState
 }
 
@@ -75,37 +76,52 @@ class AiManager(
         // A new text field means whatever we previewed no longer applies.
         editorInstance.activeInfoFlow
             .distinctUntilChangedBy { it.base.fieldId to it.base.packageName }
-            .onEach { reset() }
+            .onEach {
+                PromptCapture.stop()
+                reset()
+            }
             .launchIn(scope)
     }
 
     fun run(action: AiAction) {
         inFlight?.cancel()
-        val target = gateway.readTarget()
+        val refine = _state.value as? AiPanelState.Refine
+        val editorTarget = refine?.original ?: gateway.readTarget()
+        // When refining, the model sees the previous result, not what is still in the editor.
+        val source = if (refine != null) editorTarget?.copy(text = refine.text) else editorTarget
         val sensitive = gateway.isSensitiveField
         _state.value = AiPanelState.Loading(action)
         inFlight = scope.launch {
-            _state.value = when (val result = useCase.execute(target, sensitive, action)) {
-                is AiResult.Success -> AiPanelState.Preview(action, target!!, result)
+            _state.value = when (val result = useCase.execute(source, sensitive, action)) {
+                is AiResult.Success -> AiPanelState.Preview(action, editorTarget!!, result)
                 is AiResult.Failure -> AiPanelState.Error(result.error)
             }
         }
     }
 
-    fun apply() {
-        val preview = _state.value as? AiPanelState.Preview ?: return
+    /** Writes the previewed text into the editor and leaves the panel idle. Returns false if the editor refused. */
+    fun apply(): Boolean {
+        val preview = _state.value as? AiPanelState.Preview ?: return false
         val applied = gateway.replace(preview.original, preview.result.text)
-        _state.value = if (applied != null) {
-            AiPanelState.Applied(preview.action, preview.original, applied)
-        } else {
-            AiPanelState.Error(AiError.UNKNOWN)
-        }
+        _state.value = if (applied != null) AiPanelState.Idle else AiPanelState.Error(AiError.UNKNOWN)
+        return applied != null
     }
 
-    fun undo() {
-        val applied = _state.value as? AiPanelState.Applied ?: return
-        gateway.replace(applied.applied, applied.original.text)
-        _state.value = AiPanelState.Idle
+    /** Keeps the previewed text as the input for another action, without touching the editor yet. */
+    fun refine() {
+        val preview = _state.value as? AiPanelState.Preview ?: return
+        _state.value = AiPanelState.Refine(preview.original, preview.result.text)
+    }
+
+    /** Stores the prompt-bar draft as a new saved prompt (one per line) and closes the bar. */
+    fun savePrompt() {
+        val text = PromptCapture.draft.value?.trim().orEmpty()
+        PromptCapture.stop()
+        if (text.isEmpty()) return
+        scope.launch {
+            val saved = prefs.ai.customPrompts.get().lines().map { it.trim() }.filter { it.isNotEmpty() }
+            if (text !in saved) prefs.ai.customPrompts.set((saved + text).joinToString("\n"))
+        }
     }
 
     fun cancel() {

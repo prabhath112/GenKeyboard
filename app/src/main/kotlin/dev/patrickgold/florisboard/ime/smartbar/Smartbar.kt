@@ -55,6 +55,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
+import com.genkeyboard.ai.PromptCapture
+import com.genkeyboard.ai.ui.PromptBar
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.ime.keyboard.FlorisImeSizing
@@ -93,6 +95,11 @@ private val NoAnimationTween = tween<Float>(0)
 
 @Composable
 fun Smartbar() {
+    val promptDraft by PromptCapture.draft.collectAsState()
+    promptDraft?.let { draft ->
+        PromptBar(draft)
+        return
+    }
     val prefs by FlorisPreferenceStore
     val smartbarEnabled by prefs.smartbar.enabled.collectAsState()
     val extendedActionsPlacement by prefs.smartbar.extendedActionsPlacement.collectAsState()

@@ -30,18 +30,28 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.genkeyboard.ai.AiPanelState
+import com.genkeyboard.ai.PromptCapture
 import com.genkeyboard.ai.domain.AiAction
 import com.genkeyboard.ai.domain.AiError
 import dev.patrickgold.florisboard.R
@@ -89,6 +99,11 @@ fun AiInputLayout(
     val keyboardManager by context.keyboardManager()
     val aiManager by context.aiManager()
     val state by aiManager.state.collectAsState()
+    // Back to the real keys with the prompt bar on top; PromptBar returns here on save or cancel.
+    val onNewPrompt = {
+        PromptCapture.start()
+        keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT
+    }
 
     SnyggColumn(
         modifier = modifier
@@ -104,25 +119,26 @@ fun AiInputLayout(
         )
         SnyggBox(Ui.Content, modifier = Modifier.fillMaxSize()) {
             when (val s = state) {
-                is AiPanelState.Idle -> ActionCatalog(onRun = aiManager::run)
+                is AiPanelState.Idle -> ActionCatalog(onRun = aiManager::run, onNewPrompt = onNewPrompt)
                 is AiPanelState.Error -> Column {
                     ErrorBanner(s.error)
-                    ActionCatalog(onRun = aiManager::run)
+                    ActionCatalog(onRun = aiManager::run, onNewPrompt = onNewPrompt)
                 }
                 is AiPanelState.Loading -> LoadingView(onCancel = aiManager::cancel)
                 is AiPanelState.Preview -> PreviewView(
                     text = s.result.text,
                     remaining = s.result.remaining,
-                    onApply = aiManager::apply,
+                    onApply = {
+                        // Straight back to typing once the text is in the field.
+                        if (aiManager.apply()) keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT
+                    },
+                    onRefine = aiManager::refine,
                     onDiscard = aiManager::reset,
                 )
-                is AiPanelState.Applied -> AppliedView(
-                    onUndo = aiManager::undo,
-                    onDone = {
-                        aiManager.reset()
-                        keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT
-                    },
-                )
+                is AiPanelState.Refine -> Column {
+                    RefineBanner(s.text)
+                    ActionCatalog(onRun = aiManager::run, onNewPrompt = onNewPrompt)
+                }
             }
         }
     }
@@ -161,7 +177,7 @@ private fun HeaderRow(state: AiPanelState, onBack: () -> Unit) {
 }
 
 @Composable
-private fun ActionCatalog(onRun: (AiAction) -> Unit) {
+private fun ActionCatalog(onRun: (AiAction) -> Unit, onNewPrompt: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -196,16 +212,21 @@ private fun ActionCatalog(onRun: (AiAction) -> Unit) {
         SectionTitle(R.string.ai__section_my_prompts)
         if (prompts.isEmpty()) {
             SnyggText(elementName = Ui.Subheader, text = stringRes(R.string.ai__my_prompts_empty))
-        } else {
-            Row(modifier = Modifier.florisHorizontalScroll(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                prompts.forEach { prompt ->
-                    SnyggChip(
-                        elementName = Ui.Chip,
-                        onClick = { onRun(AiAction.Custom(prompt)) },
-                        imageVector = Icons.Default.AutoAwesome,
-                        text = prompt.take(28) + if (prompt.length > 28) "…" else "",
-                    )
-                }
+        }
+        Row(modifier = Modifier.florisHorizontalScroll(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            SnyggChip(
+                elementName = Ui.Chip,
+                onClick = onNewPrompt,
+                imageVector = Icons.Default.Add,
+                text = stringRes(R.string.ai__button_new_prompt),
+            )
+            prompts.forEach { prompt ->
+                SnyggChip(
+                    elementName = Ui.Chip,
+                    onClick = { onRun(AiAction.Custom(prompt)) },
+                    imageVector = Icons.Default.AutoAwesome,
+                    text = prompt.take(28) + if (prompt.length > 28) "…" else "",
+                )
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -267,7 +288,7 @@ private fun LoadingView(onCancel: () -> Unit) {
 }
 
 @Composable
-private fun PreviewView(text: String, remaining: Int?, onApply: () -> Unit, onDiscard: () -> Unit) {
+private fun PreviewView(text: String, remaining: Int?, onApply: () -> Unit, onRefine: () -> Unit, onDiscard: () -> Unit) {
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
         SnyggBox(
             Ui.Card,
@@ -284,40 +305,63 @@ private fun PreviewView(text: String, remaining: Int?, onApply: () -> Unit, onDi
                 text = text,
             )
         }
+        if (remaining != null) {
+            SnyggText(
+                elementName = Ui.Subheader,
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                text = stringRes(R.string.ai__status_remaining, "count" to remaining),
+            )
+        }
+        // One row, equal widths, single-line labels: primary / secondary / quiet, so the hierarchy is obvious.
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ActionButton(R.string.ai__button_replace, null, onApply)
-            ActionButton(R.string.ai__button_discard, null, onDiscard)
-            if (remaining != null) {
-                Spacer(Modifier.weight(1f))
-                SnyggText(elementName = Ui.Subheader, text = stringRes(R.string.ai__status_remaining, "count" to remaining))
+            Button(onClick = onApply, modifier = Modifier.weight(1f), contentPadding = PreviewButtonPadding) {
+                PreviewButtonLabel(R.string.ai__button_replace)
+            }
+            FilledTonalButton(onClick = onRefine, modifier = Modifier.weight(1f), contentPadding = PreviewButtonPadding) {
+                PreviewButtonLabel(R.string.ai__button_add_filter)
+            }
+            TextButton(
+                onClick = onDiscard,
+                modifier = Modifier.weight(1f),
+                contentPadding = PreviewButtonPadding,
+                // Light enough to meet contrast on the dark panel; the default primary is too dim there.
+                colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFD0BCFF)),
+            ) {
+                PreviewButtonLabel(R.string.ai__button_discard)
             }
         }
     }
 }
 
 @Composable
-private fun AppliedView(onUndo: () -> Unit, onDone: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        SnyggText(elementName = Ui.CardText, text = stringRes(R.string.ai__status_applied))
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ActionButton(R.string.ai__button_undo, null, onUndo)
-            ActionButton(R.string.ai__button_done, null, onDone)
+private fun RefineBanner(text: String) {
+    SnyggBox(Ui.Card, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)) {
+        Column(modifier = Modifier.padding(8.dp)) {
+            SnyggText(elementName = Ui.Subheader, text = stringRes(R.string.ai__status_refining))
+            SnyggText(elementName = Ui.CardText, text = text.take(100) + if (text.length > 100) "…" else "")
         }
     }
 }
 
+private val PreviewButtonPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+
 @Composable
-private fun ActionButton(label: Int, icon: androidx.compose.ui.graphics.vector.ImageVector?, onClick: () -> Unit) {
-    SnyggButton(elementName = Ui.Action, onClick = onClick) {
+private fun PreviewButtonLabel(label: Int) {
+    Text(text = stringRes(label), maxLines = 1, overflow = TextOverflow.Ellipsis)
+}
+
+@Composable
+private fun ActionButton(
+    label: Int,
+    icon: androidx.compose.ui.graphics.vector.ImageVector?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    SnyggButton(elementName = Ui.Action, onClick = onClick, modifier = modifier) {
         if (icon != null) {
             SnyggIcon(imageVector = icon)
             Spacer(Modifier.padding(horizontal = 2.dp))

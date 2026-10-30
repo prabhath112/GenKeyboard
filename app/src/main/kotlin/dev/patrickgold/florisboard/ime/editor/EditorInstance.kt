@@ -22,6 +22,7 @@ import android.content.Context
 import android.view.KeyEvent
 import androidx.core.view.inputmethod.InputConnectionCompat
 import androidx.core.view.inputmethod.InputContentInfoCompat
+import com.genkeyboard.ai.PromptCapture
 import dev.patrickgold.florisboard.FlorisImeService
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.appContext
@@ -197,6 +198,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
     }
 
     override fun commitChar(char: String): Boolean {
+        if (PromptCapture.isActive) return true.also { PromptCapture.type(char) }
         val isInsertAutoSpaceBeforeChar = shouldInsertAutoSpaceBefore(char)
         val isInsertAutoSpaceAfterChar = shouldInsertAutoSpaceAfter(char)
         val isDeletePreviousSpace = isInsertAutoSpaceAfterChar && autoSpace.isActive
@@ -228,6 +230,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      * @return True on success, false if an error occurred or the input connection is invalid.
      */
     override fun commitText(text: String): Boolean {
+        if (PromptCapture.isActive) return true.also { PromptCapture.type(text) }
         val isPhantomSpaceActive = phantomSpace.determine(text)
         autoSpace.setInactive()
         phantomSpace.setInactive()
@@ -251,6 +254,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      */
     fun commitCompletion(candidate: SuggestionCandidate): Boolean {
         val text = candidate.text.toString()
+        if (PromptCapture.isActive) return true.also { PromptCapture.type("$text ") }
         if (text.isEmpty() || activeInfo.isRawInputEditor) return false
         val content = activeContent
         return if (content.composing.isValid) {
@@ -281,6 +285,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      * @return True on success, false if an error occurred or the input connection is invalid.
      */
     fun commitGesture(text: String): Boolean {
+        if (PromptCapture.isActive) return true.also { PromptCapture.type("$text ") }
         if (text.isEmpty() || activeInfo.isRawInputEditor) return false
         val isPhantomSpaceActive = phantomSpace.determine(text, forceActive = true)
         phantomSpace.setActive(showComposingRegion = true)
@@ -341,6 +346,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      * @return True on success, false if an error occurred or the input connection is invalid.
      */
     fun deleteBackwards(unit: OperationUnit): Boolean {
+        if (PromptCapture.isActive) return true.also { PromptCapture.backspace() }
         val content = activeContent
         if (unit == OperationUnit.CHARACTERS) {
             if (phantomSpace.isActive && content.currentWord.isValid && prefs.glide.immediateBackspaceDeletesWord.get()) {
@@ -488,6 +494,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      * @return True on success, false if an error occurred or the input connection is invalid.
      */
     fun performEnter(): Boolean {
+        if (PromptCapture.isActive) return true
         autoSpace.setInactive()
         phantomSpace.setInactive()
         return if (activeInfo.isRawInputEditor) {
@@ -513,6 +520,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      * @return True on success, false if an error occurred or the input connection is invalid.
      */
     fun performEnterAction(action: ImeOptions.Action): Boolean {
+        if (PromptCapture.isActive) return true // never fire Send/Go while writing a prompt
         autoSpace.setInactive()
         phantomSpace.setInactive()
         val ic = currentInputConnection() ?: return false

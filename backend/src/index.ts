@@ -169,7 +169,7 @@ async function handleTransform(req: Request, env: Env, ctx: ExecutionContext): P
     ctx.waitUntil(bumpBy(env.QUOTA, `latms:${day}`, Date.now() - started));
     ctx.waitUntil(bumpHourly(env.QUOTA, true));
     // No `remaining` in the response: capacity is managed server-side per model, users never see a counter.
-    return json(200, { text: cleanOutput(text), provider });
+    return json(200, { text: cleanOutput(text, parsed.action), provider });
   } catch (e) {
     const msg = (e as Error).message;
     console.error("all providers failed", msg);
