@@ -23,6 +23,7 @@ import com.genkeyboard.ai.domain.TextEditorGateway
 import com.genkeyboard.ai.domain.TextTarget
 import dev.patrickgold.florisboard.FlorisImeService
 import dev.patrickgold.florisboard.editorInstance
+import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.ime.editor.InputAttributes
 
 /**
@@ -31,9 +32,11 @@ import dev.patrickgold.florisboard.ime.editor.InputAttributes
  */
 class InputConnectionTextGateway(context: Context) : TextEditorGateway {
     private val editorInstance by context.editorInstance()
+    private val keyboardManager by context.keyboardManager()
 
     override val isSensitiveField: Boolean
         get() {
+            if (keyboardManager.activeState.isIncognitoMode) return true
             val info = editorInstance.activeInfo
             return when (info.inputAttributes.variation) {
                 InputAttributes.Variation.PASSWORD,

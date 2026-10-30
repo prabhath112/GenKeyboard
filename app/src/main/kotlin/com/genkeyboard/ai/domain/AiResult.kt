@@ -31,6 +31,8 @@ enum class AiError {
     NO_TEXT,
     /** Password or otherwise sensitive field. Text never leaves the device. */
     SENSITIVE_FIELD,
+    /** The user has not accepted the one-time data disclosure yet. */
+    CONSENT_REQUIRED,
     TEXT_TOO_LONG,
     NETWORK,
     TIMEOUT,

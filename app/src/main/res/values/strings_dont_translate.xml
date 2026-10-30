@@ -3,7 +3,7 @@
 
     <string name="florisboard__repo_url" translatable="false">https://github.com/florisboard/florisboard</string>
     <string name="florisboard__issue_tracker_url" translatable="false">https://github.com/florisboard/florisboard/issues</string>
-    <string name="florisboard__privacy_policy_url" translatable="false">https://florisboard.org/legal/privacy/</string>
+    <string name="florisboard__privacy_policy_url" translatable="false">https://prabhath112.github.io/GenKeyboard/PRIVACY</string>
     <string name="florisboard__changelog_url" translatable="false">https://github.com/florisboard/florisboard/releases/v{version}</string>
     <string name="florisboard__commit_by_hash_url" translatable="false">https://github.com/florisboard/florisboard/commit/{hash}</string>
     <string name="florisboard__internal_key_codes_url" translatable="false">https://github.com/florisboard/florisboard/blob/main/app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/key/KeyCode.kt</string>

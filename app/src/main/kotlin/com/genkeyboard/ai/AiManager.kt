@@ -92,6 +92,10 @@ class AiManager(
         val sensitive = gateway.isSensitiveField
         _state.value = AiPanelState.Loading(action)
         inFlight = scope.launch {
+            if (!prefs.ai.consent.get()) {
+                _state.value = AiPanelState.Error(AiError.CONSENT_REQUIRED)
+                return@launch
+            }
             _state.value = when (val result = useCase.execute(source, sensitive, action)) {
                 is AiResult.Success -> AiPanelState.Preview(action, editorTarget!!, result)
                 is AiResult.Failure -> AiPanelState.Error(result.error)

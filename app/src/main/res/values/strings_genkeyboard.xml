@@ -46,15 +46,24 @@
     <string name="ai__button_cancel">Cancel</string>
 
     <string name="ai__error_no_text">Type or select some text first.</string>
-    <string name="ai__error_sensitive_field">AI tools are disabled in password fields.</string>
+    <string name="ai__error_sensitive_field">AI tools are off in password fields and incognito mode.</string>
     <string name="ai__error_text_too_long">Text is too long. Select a shorter part.</string>
     <string name="ai__error_network">No connection. Check your network and try again.</string>
     <string name="ai__error_timeout">The AI took too long. Try again.</string>
     <string name="ai__error_unauthorized">This device is not authorized. Reinstall or contact support.</string>
-    <string name="ai__error_quota">Daily free limit reached. Upgrade for unlimited rewrites.</string>
+    <string name="ai__error_quota">Daily limit reached. It resets tomorrow.</string>
+    <string name="ai__error_consent">Allow AI tools first to use this.</string>
     <string name="ai__error_invalid">That request could not be processed.</string>
     <string name="ai__error_upstream">AI service is unavailable right now. Try again shortly.</string>
 
+    <string name="ai__consent_title">Before you use AI tools</string>
+    <string name="ai__consent_body">When you tap an AI action, GenKeyboard sends the text in the field (or your selection), the action you chose and a random device ID to our server. The server passes the text to a third-party AI provider (Google Gemini, OpenRouter, xAI, OpenAI or Anthropic) to write the result. We do not store your text. Nothing is sent until you tap an action, and never from password fields or incognito mode. You can turn AI tools off at any time in Settings.</string>
+    <string name="ai__consent_privacy">Read the privacy policy</string>
+    <string name="ai__consent_allow">Allow</string>
+    <string name="ai__consent_decline">Not now</string>
+    <string name="ai__button_report">Report this result</string>
+    <string name="ai__report_subject">GenKeyboard AI result report</string>
+    <string name="ai__report_body">Tell us what was wrong with the result. Your text and the result are NOT included unless you paste them here.</string>
     <string name="pref__ai__title">AI writing tools</string>
     <string name="pref__ai__enabled__label">Enable AI tools</string>
     <string name="pref__ai__backend_url__label">Backend URL</string>

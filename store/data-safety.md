@@ -12,7 +12,7 @@ Answers that match `PRIVACY.md` and the code. Do not claim less than this.
 
 ### Personal info → Other info
 - **Collected**: Yes. The text in the input field when the user taps an AI action.
-- **Shared**: Yes, with the AI provider (Google Gemini, OpenRouter) to produce the result. Sharing is "for app functionality"; it is processing by a service provider, not sale.
+- **Shared**: Yes, with the AI provider (Google Gemini, OpenRouter, xAI, OpenAI, Anthropic) to produce the result. Sharing is "for app functionality"; it is processing by a service provider, not sale.
 - **Processed ephemerally**: Yes (not stored beyond the request).
 - **Required or optional**: Optional (user must tap an action).
 - **Purpose**: App functionality.

@@ -38,6 +38,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.PaddingValues
@@ -45,6 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -54,6 +56,7 @@ import com.genkeyboard.ai.AiPanelState
 import com.genkeyboard.ai.PromptCapture
 import com.genkeyboard.ai.domain.AiAction
 import com.genkeyboard.ai.domain.AiError
+import dev.patrickgold.florisboard.BuildConfig
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.aiManager
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
@@ -62,7 +65,9 @@ import dev.patrickgold.florisboard.ime.ImeUiMode
 import dev.patrickgold.florisboard.ime.keyboard.FlorisImeSizing
 import dev.patrickgold.florisboard.ime.theme.FlorisImeUi
 import dev.patrickgold.florisboard.keyboardManager
+import dev.patrickgold.florisboard.lib.util.launchUrl
 import org.florisboard.lib.compose.florisHorizontalScroll
+import kotlinx.coroutines.launch
 import org.florisboard.lib.compose.stringRes
 import org.florisboard.lib.snygg.ui.SnyggBox
 import org.florisboard.lib.snygg.ui.SnyggButton
@@ -99,6 +104,9 @@ fun AiInputLayout(
     val keyboardManager by context.keyboardManager()
     val aiManager by context.aiManager()
     val state by aiManager.state.collectAsState()
+    val prefs by FlorisPreferenceStore
+    val consented by prefs.ai.consent.collectAsState()
+    val scope = rememberCoroutineScope()
     // Back to the real keys with the prompt bar on top; PromptBar returns here on save or cancel.
     val onNewPrompt = {
         PromptCapture.start()
@@ -118,6 +126,16 @@ fun AiInputLayout(
             },
         )
         SnyggBox(Ui.Content, modifier = Modifier.fillMaxSize()) {
+            if (!consented) {
+                ConsentView(
+                    onAllow = { scope.launch { prefs.ai.consent.set(true) } },
+                    onDecline = {
+                        aiManager.cancel()
+                        keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT
+                    },
+                )
+                return@SnyggBox
+            }
             when (val s = state) {
                 is AiPanelState.Idle -> ActionCatalog(onRun = aiManager::run, onNewPrompt = onNewPrompt)
                 is AiPanelState.Error -> Column {
@@ -133,6 +151,7 @@ fun AiInputLayout(
                         if (aiManager.apply()) keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT
                     },
                     onRefine = aiManager::refine,
+                    onReport = { reportResult(context, s.action) },
                     onDiscard = aiManager::reset,
                 )
                 is AiPanelState.Refine -> Column {
@@ -140,6 +159,53 @@ fun AiInputLayout(
                     ActionCatalog(onRun = aiManager::run, onNewPrompt = onNewPrompt)
                 }
             }
+        }
+    }
+}
+
+/** Opens the user's mail app with a prefilled report. No user text or AI result is attached. */
+private fun reportResult(context: android.content.Context, action: AiAction) {
+    val body = context.getString(R.string.ai__report_body) + "\n\nAction: ${action::class.simpleName}\nApp: ${BuildConfig.VERSION_NAME}"
+    val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
+        data = android.net.Uri.parse("mailto:prabhath.kumar2000@gmail.com")
+        putExtra(android.content.Intent.EXTRA_SUBJECT, context.getString(R.string.ai__report_subject))
+        putExtra(android.content.Intent.EXTRA_TEXT, body)
+        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    runCatching { context.startActivity(intent) }
+}
+
+@Composable
+private fun ConsentView(onAllow: () -> Unit, onDecline: () -> Unit) {
+    val context = LocalContext.current
+    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
+        // Only the explanation scrolls; the decision buttons stay on screen whatever the panel height.
+        Column(
+            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            SnyggText(elementName = Ui.HeaderText, text = stringRes(R.string.ai__consent_title))
+            SnyggText(elementName = Ui.CardText, text = stringRes(R.string.ai__consent_body))
+            TextButton(
+                onClick = { context.launchUrl(R.string.florisboard__privacy_policy_url) },
+                contentPadding = PreviewButtonPadding,
+            ) {
+                Text(text = stringRes(R.string.ai__consent_privacy), color = Color(0xFFD0BCFF))
+            }
+        }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+        ) {
+            Button(onClick = onAllow, modifier = Modifier.weight(1f), contentPadding = PreviewButtonPadding) {
+                PreviewButtonLabel(R.string.ai__consent_allow)
+            }
+            TextButton(
+                onClick = onDecline,
+                modifier = Modifier.weight(1f),
+                contentPadding = PreviewButtonPadding,
+                colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFD0BCFF)),
+            ) { PreviewButtonLabel(R.string.ai__consent_decline) }
         }
     }
 }
@@ -261,6 +327,7 @@ private fun ErrorBanner(error: AiError) {
     val res = when (error) {
         AiError.NO_TEXT -> R.string.ai__error_no_text
         AiError.SENSITIVE_FIELD -> R.string.ai__error_sensitive_field
+        AiError.CONSENT_REQUIRED -> R.string.ai__error_consent
         AiError.TEXT_TOO_LONG -> R.string.ai__error_text_too_long
         AiError.NETWORK -> R.string.ai__error_network
         AiError.TIMEOUT -> R.string.ai__error_timeout
@@ -288,7 +355,14 @@ private fun LoadingView(onCancel: () -> Unit) {
 }
 
 @Composable
-private fun PreviewView(text: String, remaining: Int?, onApply: () -> Unit, onRefine: () -> Unit, onDiscard: () -> Unit) {
+private fun PreviewView(
+    text: String,
+    remaining: Int?,
+    onApply: () -> Unit,
+    onRefine: () -> Unit,
+    onReport: () -> Unit,
+    onDiscard: () -> Unit,
+) {
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
         SnyggBox(
             Ui.Card,
@@ -303,6 +377,13 @@ private fun PreviewView(text: String, remaining: Int?, onApply: () -> Unit, onRe
                     .verticalScroll(rememberScrollState())
                     .padding(10.dp),
                 text = text,
+            )
+        }
+        TextButton(onClick = onReport, contentPadding = PreviewButtonPadding) {
+            Text(
+                text = stringRes(R.string.ai__button_report),
+                color = Color(0xFFD0BCFF),
+                style = MaterialTheme.typography.labelMedium,
             )
         }
         if (remaining != null) {
