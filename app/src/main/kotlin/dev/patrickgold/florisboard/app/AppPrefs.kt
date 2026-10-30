@@ -89,6 +89,11 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
             key = "ai__enabled",
             default = true,
         )
+        /** True once the user accepted the one-time disclosure. No AI request is sent before this. */
+        val consent = boolean(
+            key = "ai__consent",
+            default = false,
+        )
         val backendUrl = string(
             key = "ai__backend_url",
             default = BuildConfig.AI_BACKEND_URL,
