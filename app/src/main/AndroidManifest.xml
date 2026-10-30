@@ -27,8 +27,9 @@
     <application
         android:name="dev.patrickgold.florisboard.FlorisApplication"
         android:allowBackup="true"
-        android:dataExtractionRules="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:icon="@mipmap/floris_app_icon"
         android:label="@string/floris_app_name"
         android:enableOnBackInvokedCallback="true"
@@ -36,9 +37,6 @@
         android:supportsRtl="true"
         android:theme="@style/FlorisAppTheme"
         tools:targetApi="tiramisu">
-
-        <!-- Allow app to be profiled for benchmarking and baseline profile generation -->
-        <profileable android:shell="true"/>
 
         <!-- IME service -->
         <service

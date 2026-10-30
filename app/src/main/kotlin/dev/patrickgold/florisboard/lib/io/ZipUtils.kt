@@ -139,8 +139,11 @@ object ZipUtils {
         dstDir.mkdirs()
         ZipFile(srcFile).use { flexFile ->
             val flexEntries = flexFile.entries()
+            var entryCount = 0
+            var totalBytes = 0L
             while (flexEntries.hasMoreElements()) {
                 val flexEntry = flexEntries.nextElement()
+                require(++entryCount <= MAX_ENTRIES) { "Zip has too many entries." }
                 if (flexEntry.name.length > 255) {
                     continue
                 }
@@ -156,20 +159,33 @@ object ZipUtils {
                 if (flexEntry.isDirectory) {
                     flexEntryFile.mkdir()
                 } else {
-                    flexFile.copy(flexEntry, flexEntryFile)
+                    totalBytes += flexFile.copy(flexEntry, flexEntryFile, MAX_TOTAL_BYTES - totalBytes)
                 }
             }
         }
     }
 
-    private fun ZipFile.copy(srcEntry: ZipEntry, dstFile: FsFile) {
+    /** Zip bomb guards. The declared entry size is attacker-controlled, so bytes are counted while copying. */
+    private const val MAX_ENTRIES = 10_000
+    private const val MAX_ENTRY_BYTES = 100_000_000L
+    private const val MAX_TOTAL_BYTES = 250_000_000L
+
+    /** Copies [srcEntry] to [dstFile], failing if it exceeds the entry cap or [remaining] total budget. Returns bytes written. */
+    private fun ZipFile.copy(srcEntry: ZipEntry, dstFile: FsFile, remaining: Long): Long {
+        val limit = minOf(MAX_ENTRY_BYTES, remaining)
+        var written = 0L
         dstFile.outputStream().use { outStream ->
-            if (srcEntry.size > 100000000) {
-                return
-            }
             this.getInputStream(srcEntry).use { inStream ->
-                inStream.copyTo(outStream)
+                val buf = ByteArray(DEFAULT_BUFFER_SIZE)
+                while (true) {
+                    val n = inStream.read(buf)
+                    if (n < 0) break
+                    written += n
+                    require(written <= limit) { "Zip entry `${srcEntry.name}` exceeds the size limit." }
+                    outStream.write(buf, 0, n)
+                }
             }
         }
+        return written
     }
 }

@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and below. The learned-word dictionary is deliberately not backed up: it can contain
+     names and passwords the user typed. -->
 <full-backup-content>
     <include
         domain="root"
@@ -6,7 +8,4 @@
     <include
         domain="file"
         path="ime"/>
-    <include
-        domain="database"
-        path="floris_user_dictionary"/>
 </full-backup-content>

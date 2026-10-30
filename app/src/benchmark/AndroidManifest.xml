@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Benchmark only: lets the macrobenchmark profile the app. Not shipped in release or beta. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <profileable android:shell="true"/>
+    </application>
+</manifest>
