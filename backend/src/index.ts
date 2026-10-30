@@ -69,6 +69,25 @@ function error(status: number, code: string, message: string): Response {
   return json(status, { error: { code, message } });
 }
 
+const MAX_TRANSFORM_BODY = 64 * 1024;
+const MAX_ATTEST_BODY = 16 * 1024;
+
+/** Reads a JSON body with a hard size cap. A Response means reject; otherwise the parsed value. */
+async function readJson(req: Request, maxBytes: number): Promise<{ value: unknown } | Response> {
+  if (!(req.headers.get("Content-Type") ?? "").toLowerCase().startsWith("application/json")) {
+    return error(415, "unsupported_media_type", "Content-Type must be application/json");
+  }
+  const declared = Number(req.headers.get("Content-Length") ?? "0");
+  if (declared > maxBytes) return error(413, "too_large", "request body too large");
+  const raw = await req.text();
+  if (raw.length > maxBytes) return error(413, "too_large", "request body too large");
+  try {
+    return { value: JSON.parse(raw) };
+  } catch {
+    return error(400, "invalid_json", "body is not valid JSON");
+  }
+}
+
 async function handleTransform(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   // ponytail: device id = bearer token. No signup friction, abusable by a determined script.
   // Upgrade path: Play Integrity attestation on first launch -> signed token.
@@ -88,12 +107,9 @@ async function handleTransform(req: Request, env: Env, ctx: ExecutionContext): P
     }
   }
 
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return error(400, "invalid_json", "body is not valid JSON");
-  }
+  const read = await readJson(req, MAX_TRANSFORM_BODY);
+  if (read instanceof Response) return read;
+  const body = read.value;
 
   let parsed;
   try {
@@ -176,12 +192,9 @@ async function handleAttest(req: Request, env: Env, ctx: ExecutionContext): Prom
     return error(503, "not_configured", "attestation not available");
   }
 
-  let body: { token?: unknown };
-  try {
-    body = (await req.json()) as { token?: unknown };
-  } catch {
-    return error(400, "invalid_json", "body is not valid JSON");
-  }
+  const read = await readJson(req, MAX_ATTEST_BODY);
+  if (read instanceof Response) return read;
+  const body = (read.value ?? {}) as { token?: unknown };
   const token = typeof body.token === "string" ? body.token.trim() : "";
   if (!token) return error(400, "invalid_request", "missing token");
 
