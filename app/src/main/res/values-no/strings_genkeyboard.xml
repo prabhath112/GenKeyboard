@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GenKeyboard-only strings. Machine-assisted; native review welcome. Missing keys fall back to English. -->
+<resources>
+    <string name="ai__consent_title">Før du bruker AI-verktøyene</string>
+    <string name="ai__consent_body">Når du trykker på en AI-handling, sender GenKeyboard teksten i feltet (eller markeringen din), handlingen du valgte og en tilfeldig enhets-ID til serveren vår. Serveren sender teksten videre til en tredjeparts AI-leverandør (Google Gemini, OpenRouter, xAI, OpenAI eller Anthropic) som lager resultatet. Vi lagrer ikke teksten din. Ingenting sendes før du trykker på en handling, og aldri fra passordfelt eller i inkognitomodus. Du kan slå av AI-verktøyene når som helst i Innstillinger.</string>
+    <string name="ai__consent_privacy">Les personvernerklæringen</string>
+    <string name="ai__consent_allow">Tillat</string>
+    <string name="ai__consent_decline">Ikke nå</string>
+    <string name="ai__button_report">Rapporter dette resultatet</string>
+    <string name="ai__report_subject">Rapport om GenKeyboard AI-resultat</string>
+    <string name="ai__report_body">Fortell oss hva som var galt med resultatet. Teksten din og resultatet er IKKE med, med mindre du limer dem inn her.</string>
+</resources>

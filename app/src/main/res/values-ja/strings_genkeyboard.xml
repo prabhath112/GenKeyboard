@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GenKeyboard-only strings. Machine-assisted; native review welcome. Missing keys fall back to English. -->
+<resources>
+    <string name="ai__consent_title">AIツールを使う前に</string>
+    <string name="ai__consent_body">AIアクションをタップすると、GenKeyboardは入力欄のテキスト（または選択範囲）、選んだアクション、ランダムな端末IDを当社のサーバーに送信します。サーバーはそのテキストを第三者のAIプロバイダー（Google Gemini、OpenRouter、xAI、OpenAI、Anthropic）に渡して結果を作成します。テキストは保存しません。アクションをタップするまで何も送信されず、パスワード欄やシークレットモードからは一切送信されません。AIツールは設定でいつでもオフにできます。</string>
+    <string name="ai__consent_privacy">プライバシーポリシーを読む</string>
+    <string name="ai__consent_allow">許可</string>
+    <string name="ai__consent_decline">今はしない</string>
+    <string name="ai__button_report">この結果を報告</string>
+    <string name="ai__report_subject">GenKeyboard AI結果の報告</string>
+    <string name="ai__report_body">結果のどこが問題だったかを教えてください。ここに貼り付けない限り、テキストと結果は含まれません。</string>
+</resources>

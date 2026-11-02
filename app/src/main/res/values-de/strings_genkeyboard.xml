@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GenKeyboard-only strings. Machine-assisted; native review welcome. Missing keys fall back to English. -->
+<resources>
+    <string name="ai__consent_title">Bevor du die KI-Tools nutzt</string>
+    <string name="ai__consent_body">Wenn du eine KI-Aktion antippst, sendet GenKeyboard den Text im Feld (oder deine Auswahl), die gewählte Aktion und eine zufällige Geräte-ID an unseren Server. Der Server gibt den Text an einen KI-Anbieter eines Drittanbieters weiter (Google Gemini, OpenRouter, xAI, OpenAI oder Anthropic), um das Ergebnis zu erzeugen. Wir speichern deinen Text nicht. Es wird nichts gesendet, bevor du eine Aktion antippst, und nie aus Passwortfeldern oder im Inkognitomodus. Du kannst die KI-Tools jederzeit in den Einstellungen ausschalten.</string>
+    <string name="ai__consent_privacy">Datenschutzerklärung lesen</string>
+    <string name="ai__consent_allow">Erlauben</string>
+    <string name="ai__consent_decline">Nicht jetzt</string>
+    <string name="ai__button_report">Dieses Ergebnis melden</string>
+    <string name="ai__report_subject">Meldung zu einem GenKeyboard-KI-Ergebnis</string>
+    <string name="ai__report_body">Sag uns, was am Ergebnis nicht stimmte. Dein Text und das Ergebnis sind NICHT enthalten, außer du fügst sie hier ein.</string>
+</resources>
