@@ -2,7 +2,7 @@
 
 All notable changes to GenKeyboard. Release notes on GitHub are taken from this file.
 
-## 1.0.3 — 2026-11-02
+## 1.1.0 — 2026-11-02
 
 ### Added
 - **Add filter** on the AI preview: keep a result and run another tool on it before replacing, so tools chain. The text in your app only changes when you tap Replace.
@@ -22,12 +22,13 @@ All notable changes to GenKeyboard. Release notes on GitHub are taken from this 
 - The daily-limit message offered an upgrade that does not exist.
 
 ### Changed
+- After updating, the AI tools ask for your consent once before the next AI request, even if you used them before.
 - AI results read more like a person typed them: filler words such as "honestly" and "genuinely" and typical AI wording are removed.
 - The in-app privacy policy link now opens GenKeyboard's own policy, which lists all five AI providers.
 
 ### Security
 - The AI service now caps request size and requires JSON.
-- Cleartext network traffic is blocked, the learned-word dictionary is no longer included in backups, and extension imports are limited in size and entry count.
+- Cleartext network traffic is blocked, the learned-word dictionary is no longer included in new backups, and extension imports are limited in size and entry count.
 - Dependencies updated (wrangler, sharp); no known vulnerabilities. GitHub Actions are pinned to commit SHAs.
 
 ## 1.0.1 — 2026-09-10
