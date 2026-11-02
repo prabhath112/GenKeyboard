@@ -2,6 +2,34 @@
 
 All notable changes to GenKeyboard. Release notes on GitHub are taken from this file.
 
+## 1.0.3 — 2026-11-02
+
+### Added
+- **Add filter** on the AI preview: keep a result and run another tool on it before replacing, so tools chain. The text in your app only changes when you tap Replace.
+- **Replace** now goes straight back to the keyboard.
+- **New prompt** in My prompts: write a saved AI prompt from the keyboard itself, with the real keys, instead of a settings page.
+- A one-time disclosure before the first AI request explains what is sent and to whom. Nothing is sent until you tap Allow.
+- **Report this result** on the AI preview opens a prefilled email, without your text.
+- AI tools are now off in incognito mode as well as password fields.
+- The disclosure and report text is translated into Arabic, Danish, German, Spanish, French, Italian, Japanese, Korean, Dutch, Norwegian, Portuguese, Brazilian Portuguese and Swedish.
+
+### Fixed
+- Opening the clipboard crashed the keyboard (#59).
+- The Enable AI tools switch did nothing; it now turns the tools off.
+- Replace could overwrite text you typed while the AI was working. It now stops and asks you to run the action again.
+- Pasting while writing a prompt put the clipboard text into your message instead of the prompt.
+- The physical keyboard screen did not update when a keyboard was attached or removed.
+- The daily-limit message offered an upgrade that does not exist.
+
+### Changed
+- AI results read more like a person typed them: filler words such as "honestly" and "genuinely" and typical AI wording are removed.
+- The in-app privacy policy link now opens GenKeyboard's own policy, which lists all five AI providers.
+
+### Security
+- The AI service now caps request size and requires JSON.
+- Cleartext network traffic is blocked, the learned-word dictionary is no longer included in backups, and extension imports are limited in size and entry count.
+- Dependencies updated (wrangler, sharp); no known vulnerabilities. GitHub Actions are pinned to commit SHAs.
+
 ## 1.0.1 — 2026-09-10
 
 ### Fixed
