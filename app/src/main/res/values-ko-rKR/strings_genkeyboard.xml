@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GenKeyboard-only strings. Machine-assisted; native review welcome. Missing keys fall back to English. -->
+<resources>
+    <string name="ai__consent_title">AI 도구를 사용하기 전에</string>
+    <string name="ai__consent_body">AI 작업을 누르면 GenKeyboard가 입력란의 텍스트(또는 선택한 부분), 선택한 작업, 임의의 기기 ID를 당사 서버로 보냅니다. 서버는 결과를 만들기 위해 이 텍스트를 외부 AI 제공업체(Google Gemini, OpenRouter, xAI, OpenAI, Anthropic)에 전달합니다. 텍스트는 저장하지 않습니다. 작업을 누르기 전에는 아무것도 전송되지 않으며, 비밀번호 입력란이나 시크릿 모드에서는 전송되지 않습니다. AI 도구는 설정에서 언제든지 끌 수 있습니다.</string>
+    <string name="ai__consent_privacy">개인정보 처리방침 읽기</string>
+    <string name="ai__consent_allow">허용</string>
+    <string name="ai__consent_decline">나중에</string>
+    <string name="ai__button_report">이 결과 신고</string>
+    <string name="ai__report_subject">GenKeyboard AI 결과 신고</string>
+    <string name="ai__report_body">결과에 어떤 문제가 있었는지 알려 주세요. 여기에 붙여넣지 않는 한 텍스트와 결과는 포함되지 않습니다.</string>
+</resources>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GenKeyboard-only strings. Machine-assisted; native review welcome. Missing keys fall back to English. -->
+<resources>
+    <string name="ai__consent_title">Voordat je de AI-hulpmiddelen gebruikt</string>
+    <string name="ai__consent_body">Als je op een AI-actie tikt, stuurt GenKeyboard de tekst in het veld (of je selectie), de gekozen actie en een willekeurig apparaat-ID naar onze server. De server geeft de tekst door aan een externe AI-aanbieder (Google Gemini, OpenRouter, xAI, OpenAI of Anthropic) om het resultaat te schrijven. We bewaren je tekst niet. Er wordt niets verstuurd totdat je op een actie tikt, en nooit vanuit wachtwoordvelden of in incognitomodus. Je kunt de AI-hulpmiddelen altijd uitzetten in Instellingen.</string>
+    <string name="ai__consent_privacy">Lees het privacybeleid</string>
+    <string name="ai__consent_allow">Toestaan</string>
+    <string name="ai__consent_decline">Niet nu</string>
+    <string name="ai__button_report">Dit resultaat melden</string>
+    <string name="ai__report_subject">Melding over een GenKeyboard AI-resultaat</string>
+    <string name="ai__report_body">Vertel ons wat er mis was met het resultaat. Je tekst en het resultaat worden NIET meegestuurd, tenzij je ze hier plakt.</string>
+</resources>

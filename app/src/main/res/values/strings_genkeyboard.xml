@@ -53,6 +53,8 @@
     <string name="ai__error_unauthorized">This device is not authorized. Reinstall or contact support.</string>
     <string name="ai__error_quota">Daily limit reached. It resets tomorrow.</string>
     <string name="ai__error_consent">Allow AI tools first to use this.</string>
+    <string name="ai__error_disabled">AI tools are turned off. Turn them on in Settings.</string>
+    <string name="ai__error_text_changed">The text changed while the AI was working. Run the action again.</string>
     <string name="ai__error_invalid">That request could not be processed.</string>
     <string name="ai__error_upstream">AI service is unavailable right now. Try again shortly.</string>
 

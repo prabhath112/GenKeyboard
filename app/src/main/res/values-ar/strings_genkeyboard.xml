@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GenKeyboard-only strings. Machine-assisted; native review welcome. Missing keys fall back to English. -->
+<resources>
+    <string name="ai__consent_title">قبل استخدام أدوات الذكاء الاصطناعي</string>
+    <string name="ai__consent_body">عند النقر على إجراء من إجراءات الذكاء الاصطناعي، يرسل GenKeyboard النص الموجود في الحقل (أو تحديدك) والإجراء الذي اخترته ومعرّف جهاز عشوائيًا إلى خادمنا. يمرّر الخادم النص إلى مزوّد ذكاء اصطناعي تابع لجهة خارجية (Google Gemini أو OpenRouter أو xAI أو OpenAI أو Anthropic) لإنشاء النتيجة. لا نحتفظ بنصك. لا يُرسل أي شيء قبل أن تنقر على إجراء، ولا يُرسل أبدًا من حقول كلمات المرور أو في وضع التصفح المتخفي. يمكنك إيقاف أدوات الذكاء الاصطناعي في أي وقت من الإعدادات.</string>
+    <string name="ai__consent_privacy">قراءة سياسة الخصوصية</string>
+    <string name="ai__consent_allow">السماح</string>
+    <string name="ai__consent_decline">ليس الآن</string>
+    <string name="ai__button_report">الإبلاغ عن هذه النتيجة</string>
+    <string name="ai__report_subject">تقرير عن نتيجة ذكاء اصطناعي في GenKeyboard</string>
+    <string name="ai__report_body">أخبرنا بما كان خاطئًا في النتيجة. لا يتم تضمين نصك ولا النتيجة إلا إذا لصقتهما هنا.</string>
+</resources>

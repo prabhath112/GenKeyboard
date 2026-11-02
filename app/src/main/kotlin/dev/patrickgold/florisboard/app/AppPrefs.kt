@@ -17,6 +17,7 @@
 package dev.patrickgold.florisboard.app
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import dev.patrickgold.florisboard.BuildConfig
@@ -111,6 +112,10 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
     }
 
     val clipboard = Clipboard()
+    // Without @Stable the Compose compiler emits reads of Clipboard.$stable but never declares that field on this
+    // inner class, so opening the clipboard crashed with NoSuchFieldError (issue #59). Its members are fixed
+    // PreferenceData holders, so treating it as stable is correct.
+    @Stable
     inner class Clipboard {
         val useInternalClipboard = boolean(
             key = "clipboard__use_internal_clipboard",

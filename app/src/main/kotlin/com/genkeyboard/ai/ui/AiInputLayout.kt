@@ -328,6 +328,8 @@ private fun ErrorBanner(error: AiError) {
         AiError.NO_TEXT -> R.string.ai__error_no_text
         AiError.SENSITIVE_FIELD -> R.string.ai__error_sensitive_field
         AiError.CONSENT_REQUIRED -> R.string.ai__error_consent
+        AiError.DISABLED -> R.string.ai__error_disabled
+        AiError.TEXT_CHANGED -> R.string.ai__error_text_changed
         AiError.TEXT_TOO_LONG -> R.string.ai__error_text_too_long
         AiError.NETWORK -> R.string.ai__error_network
         AiError.TIMEOUT -> R.string.ai__error_timeout

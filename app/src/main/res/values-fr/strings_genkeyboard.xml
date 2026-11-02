@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GenKeyboard-only strings. Machine-assisted; native review welcome. Missing keys fall back to English. -->
+<resources>
+    <string name="ai__consent_title">Avant d\'utiliser les outils d\'IA</string>
+    <string name="ai__consent_body">Lorsque vous appuyez sur une action d\'IA, GenKeyboard envoie à notre serveur le texte du champ (ou votre sélection), l\'action choisie et un identifiant d\'appareil aléatoire. Le serveur transmet le texte à un fournisseur d\'IA tiers (Google Gemini, OpenRouter, xAI, OpenAI ou Anthropic) pour générer le résultat. Nous ne conservons pas votre texte. Rien n\'est envoyé tant que vous n\'appuyez pas sur une action, et jamais depuis les champs de mot de passe ni en navigation privée. Vous pouvez désactiver les outils d\'IA à tout moment dans les Paramètres.</string>
+    <string name="ai__consent_privacy">Lire la politique de confidentialité</string>
+    <string name="ai__consent_allow">Autoriser</string>
+    <string name="ai__consent_decline">Pas maintenant</string>
+    <string name="ai__button_report">Signaler ce résultat</string>
+    <string name="ai__report_subject">Signalement d\'un résultat d\'IA GenKeyboard</string>
+    <string name="ai__report_body">Dites-nous ce qui n\'allait pas dans le résultat. Votre texte et le résultat ne sont PAS inclus, sauf si vous les collez ici.</string>
+</resources>
