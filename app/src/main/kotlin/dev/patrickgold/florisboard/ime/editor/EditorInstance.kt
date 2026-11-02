@@ -309,6 +309,10 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      */
     fun commitClipboardItem(item: ClipboardItem?): Boolean {
         if (item == null) return false
+        if (PromptCapture.isActive) {
+            if (item.type == ItemType.TEXT) PromptCapture.type(item.text.toString())
+            return true
+        }
         val mimeTypes = item.mimeTypes
         return when (item.type) {
             ItemType.TEXT -> {

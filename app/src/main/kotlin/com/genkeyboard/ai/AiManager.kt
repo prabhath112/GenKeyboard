@@ -92,6 +92,10 @@ class AiManager(
         val sensitive = gateway.isSensitiveField
         _state.value = AiPanelState.Loading(action)
         inFlight = scope.launch {
+            if (!prefs.ai.enabled.get()) {
+                _state.value = AiPanelState.Error(AiError.DISABLED)
+                return@launch
+            }
             if (!prefs.ai.consent.get()) {
                 _state.value = AiPanelState.Error(AiError.CONSENT_REQUIRED)
                 return@launch
@@ -107,7 +111,7 @@ class AiManager(
     fun apply(): Boolean {
         val preview = _state.value as? AiPanelState.Preview ?: return false
         val applied = gateway.replace(preview.original, preview.result.text)
-        _state.value = if (applied != null) AiPanelState.Idle else AiPanelState.Error(AiError.UNKNOWN)
+        _state.value = if (applied != null) AiPanelState.Idle else AiPanelState.Error(AiError.TEXT_CHANGED)
         return applied != null
     }
 

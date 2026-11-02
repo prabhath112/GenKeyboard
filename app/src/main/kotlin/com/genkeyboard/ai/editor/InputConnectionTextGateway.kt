@@ -63,6 +63,16 @@ class InputConnectionTextGateway(context: Context) : TextEditorGateway {
 
     override fun replace(target: TextTarget, newText: String): TextTarget? {
         val ic = FlorisImeService.currentInputConnection() ?: return null
+        // The request takes seconds. If the user kept typing, the saved offsets point at the wrong text and
+        // replacing would silently overwrite it, so verify the span still holds what we read. Editors that
+        // cannot report their text (null) are left unchecked rather than blocked.
+        val extracted = ic.getExtractedText(ExtractedTextRequest(), 0)
+        val current = extracted?.text?.toString()
+        if (extracted != null && current != null) {
+            val from = target.start - extracted.startOffset
+            val to = target.end - extracted.startOffset
+            if (from < 0 || to > current.length || current.substring(from, to) != target.text) return null
+        }
         val ok = ic.batch {
             finishComposingText()
             setSelection(target.start, target.end) && commitText(newText, 1)

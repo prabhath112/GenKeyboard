@@ -33,6 +33,10 @@ enum class AiError {
     SENSITIVE_FIELD,
     /** The user has not accepted the one-time data disclosure yet. */
     CONSENT_REQUIRED,
+    /** The user turned AI tools off in Settings. */
+    DISABLED,
+    /** The text in the field changed while the request ran, so replacing it would overwrite the wrong span. */
+    TEXT_CHANGED,
     TEXT_TOO_LONG,
     NETWORK,
     TIMEOUT,
