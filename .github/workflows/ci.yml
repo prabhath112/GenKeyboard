@@ -13,6 +13,23 @@ permissions:
   contents: read
 
 jobs:
+  website:
+    name: Website (Vercel build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+      # Same command Vercel runs (vercel.json buildCommand), then check the output.
+      - run: node website/build.mjs
+      - name: Check the built site
+        run: |
+          for f in index.html style.css privacy/index.html assets/icon-512.png; do
+            test -s "website/dist/$f" || { echo "missing website/dist/$f"; exit 1; }
+          done
+          grep -q 'Last updated' website/dist/privacy/index.html
+
   backend:
     name: Backend (Cloudflare Worker)
     runs-on: ubuntu-latest
