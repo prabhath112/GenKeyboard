@@ -15,7 +15,9 @@ for (const f of ['graphics/icon-512.png', 'graphics/feature-1024x500.png',
   cpSync(join(root, 'store', f), join(out, 'assets', f.split('/').pop()));
 }
 
-const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+// Quotes are escaped too: URLs from the text end up inside href="..." attributes.
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 const inline = (s) => esc(s)
   .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
   .replace(/`([^`]+)`/g, '<code>$1</code>')
