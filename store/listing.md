@@ -9,7 +9,7 @@ Everything Play Console asks for, ready to paste. Keep this folder in sync with 
 - **Category**: Tools
 - **Tags**: keyboard, AI writing, grammar
 - **Contact email**: your Play developer email
-- **Privacy policy URL**: https://github.com/prabhath112/GenKeyboard/blob/main/PRIVACY.md
+- **Privacy policy URL**: https://genkeyboard.vercel.app/privacy
 - **Ads**: No
 - **In-app purchases**: No (for now)
 - **Target audience**: 18+ (avoids the Families policy questionnaire)

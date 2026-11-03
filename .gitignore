@@ -73,3 +73,6 @@ keystore.properties
 
 # IDE
 .vs/
+
+.vercel
+.env*

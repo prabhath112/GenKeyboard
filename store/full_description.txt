@@ -23,7 +23,7 @@ PRIVACY FIRST
 • Password fields are excluded from AI tools automatically.
 • Word suggestions and your personal dictionary live only on your device.
 
-Full privacy policy: https://github.com/prabhath112/GenKeyboard/blob/main/PRIVACY.md
+Full privacy policy: https://genkeyboard.vercel.app/privacy
 
 OPEN SOURCE
 GenKeyboard is open source (Apache 2.0) and a fork of FlorisBoard. Source, issues and releases: https://github.com/prabhath112/GenKeyboard

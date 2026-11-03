@@ -1,0 +1,10 @@
+# Vercel only needs the website, its images and the privacy policy.
+/*
+!/website
+/website/dist
+!/store
+/store/*
+!/store/graphics
+!/store/screenshots
+!/PRIVACY.md
+!/vercel.json

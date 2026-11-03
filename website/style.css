@@ -1,0 +1,29 @@
+:root { color-scheme: dark light; --bg: #0f1115; --fg: #e8eaed; --muted: #9aa0a6; --accent: #7c9cff; --card: #171a21; --line: #262a33; }
+@media (prefers-color-scheme: light) { :root { --bg: #fbfbfc; --fg: #15171a; --muted: #5f6368; --accent: #3a5bd9; --card: #fff; --line: #e3e5e8; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+a { color: var(--accent); }
+.wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+.top { display: flex; justify-content: space-between; align-items: center; padding-top: 18px; padding-bottom: 18px; }
+.brand { display: flex; gap: 10px; align-items: center; color: var(--fg); font-weight: 700; text-decoration: none; }
+.brand img { border-radius: 8px; }
+nav a { margin-left: 18px; color: var(--muted); text-decoration: none; }
+nav a:hover { color: var(--fg); }
+.hero { padding-top: 56px; padding-bottom: 32px; }
+h1 { font-size: clamp(2rem, 5vw, 3.4rem); line-height: 1.1; margin: 0 0 16px; max-width: 16ch; }
+.lead { font-size: 1.2rem; color: var(--muted); max-width: 60ch; }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; margin: 28px 0 12px; }
+.btn { display: inline-block; padding: 12px 20px; border: 1px solid var(--line); border-radius: 10px; color: var(--fg); text-decoration: none; font-weight: 600; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.note { color: var(--muted); font-size: .9rem; }
+.shots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding-top: 16px; padding-bottom: 40px; }
+.shots img { width: 100%; height: auto; border-radius: 16px; border: 1px solid var(--line); }
+@media (max-width: 700px) { .shots { grid-template-columns: 1fr; max-width: 360px; } }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; padding-bottom: 48px; }
+.grid > div { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; }
+h2 { font-size: 1.2rem; margin: 0 0 8px; }
+ul { padding-left: 1.2em; margin: 0; }
+.foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding-top: 24px; padding-bottom: 32px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+.doc { max-width: 760px; padding-top: 24px; padding-bottom: 48px; }
+.doc h1 { font-size: 2.2rem; max-width: none; }
+.doc h2 { margin-top: 28px; }
