@@ -4,6 +4,10 @@
 
 **GenKeyboard is an Android keyboard with built-in AI writing tools.** Fix grammar, change tone, paraphrase, shorten, expand, translate, draft a reply, summarize, emojify, all from a panel in the keyboard itself, in any app.
 
+Website: [genkeyboard.vercel.app](https://genkeyboard.vercel.app) · Privacy policy: [genkeyboard.vercel.app/privacy](https://genkeyboard.vercel.app/privacy) · Download: [latest release](https://github.com/prabhath112/GenKeyboard/releases/latest)
+
+The website lives in `website/` and deploys to Vercel on every push to `main` (`vercel.json`). The privacy page is generated from `PRIVACY.md`.
+
 ## Where the code comes from
 
 GenKeyboard is a fork of [FlorisBoard](https://github.com/florisboard/florisboard) by Patrick Goldinger and the FlorisBoard contributors, licensed under Apache 2.0. Read this before assuming anything about the codebase:
