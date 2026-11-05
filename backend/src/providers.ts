@@ -85,9 +85,41 @@ export interface ChainResult {
   provider: string;
 }
 
-/** Tries providers in order; returns the first success. Throws the last error if all fail. */
+/** One call to one provider, kept for the Server-Timing header. */
+export interface Attempt {
+  provider: string;
+  ms: number;
+  outcome: "ok" | "error" | "cancelled";
+}
+
+function delay(ms: number): { promise: Promise<"hedge">; cancel: () => void } {
+  let id: ReturnType<typeof setTimeout> | undefined;
+  const promise = new Promise<"hedge">((resolve) => {
+    id = setTimeout(() => resolve("hedge"), ms);
+  });
+  return {
+    promise,
+    cancel: () => {
+      if (id !== undefined) clearTimeout(id);
+    },
+  };
+}
+
+type Settled =
+  | { i: number; name: string; t0: number; ok: true; text: string }
+  | { i: number; name: string; t0: number; ok: false; error: unknown };
+
+/**
+ * Tries providers in order; returns the first success. Throws the last error if all fail.
+ *
+ * With `hedgeAfterMs` set, a provider that has not answered by then does not block the next one: the next
+ * provider starts alongside it and whichever answers first wins, the loser is cancelled. A provider that
+ * fails starts the next one immediately. Without it the chain is strictly sequential.
+ * `attempts` lists every call made, for timing diagnostics (a chain instance serves one request).
+ */
 export class ProviderChain implements ChatProvider {
   readonly name = "chain";
+  readonly attempts: Attempt[] = [];
 
   constructor(
     private readonly providers: ChatProvider[],
@@ -98,6 +130,8 @@ export class ProviderChain implements ChatProvider {
       allow(name: string): Promise<boolean>;
       record(name: string, err?: ProviderError): Promise<void>;
     },
+    /** Start the next provider this long after the previous one, without cancelling it. 0/undefined = off. */
+    private readonly hedgeAfterMs?: number,
   ) {
     if (providers.length === 0) throw new Error("ProviderChain requires at least one provider");
   }
@@ -108,23 +142,73 @@ export class ProviderChain implements ChatProvider {
 
   async completeWithSource(messages: ChatMessage[], signal?: AbortSignal): Promise<ChainResult> {
     let lastError: unknown = new Error("all providers over budget");
-    for (const p of this.providers) {
-      if (this.gate && !(await this.gate.allow(p.name))) continue;
-      try {
-        const perProvider = this.perProviderTimeoutMs
-          ? AbortSignal.any([...(signal ? [signal] : []), AbortSignal.timeout(this.perProviderTimeoutMs)])
-          : signal;
-        const text = await p.complete(messages, perProvider);
-        await this.gate?.record(p.name);
-        return { text, provider: p.name };
-      } catch (e) {
-        lastError = e;
-        if (e instanceof ProviderError) {
-          this.onFailure(e);
-          await this.gate?.record(p.name, e);
-        }
-        if (signal?.aborted) break;
+    let next = 0;
+    const running = new Map<number, Promise<Settled>>();
+    const controllers = new Map<number, AbortController>();
+    const startedAt = new Map<number, number>();
+
+    // Starts the next provider the budget gate allows. False when none is left.
+    const launch = async (): Promise<boolean> => {
+      while (next < this.providers.length) {
+        const i = next++;
+        const p = this.providers[i];
+        if (this.gate && !(await this.gate.allow(p.name))) continue;
+        const controller = new AbortController();
+        controllers.set(i, controller);
+        const signals = [controller.signal, ...(signal ? [signal] : [])];
+        if (this.perProviderTimeoutMs) signals.push(AbortSignal.timeout(this.perProviderTimeoutMs));
+        const t0 = Date.now();
+        startedAt.set(i, t0);
+        running.set(
+          i,
+          p.complete(messages, AbortSignal.any(signals)).then(
+            (text): Settled => ({ i, name: p.name, t0, ok: true, text }),
+            (error): Settled => ({ i, name: p.name, t0, ok: false, error }),
+          ),
+        );
+        return true;
       }
+      return false;
+    };
+
+    if (!(await launch())) throw lastError;
+
+    while (running.size > 0) {
+      const hedge = this.hedgeAfterMs && next < this.providers.length ? delay(this.hedgeAfterMs) : undefined;
+      const r = await Promise.race([...running.values(), ...(hedge ? [hedge.promise] : [])]);
+      hedge?.cancel();
+
+      if (r === "hedge") {
+        await launch();
+        continue;
+      }
+
+      running.delete(r.i);
+      controllers.delete(r.i);
+      const now = Date.now();
+
+      if (r.ok) {
+        this.attempts.push({ provider: r.name, ms: now - r.t0, outcome: "ok" });
+        await this.gate?.record(r.name);
+        // The race is over: cancel the others. They already cost a call, so count it against their budget.
+        for (const [i, c] of controllers) {
+          c.abort();
+          const loser = this.providers[i].name;
+          this.attempts.push({ provider: loser, ms: now - (startedAt.get(i) ?? now), outcome: "cancelled" });
+          await this.gate?.record(loser);
+        }
+        return { text: r.text, provider: r.name };
+      }
+
+      lastError = r.error;
+      this.attempts.push({ provider: r.name, ms: now - r.t0, outcome: "error" });
+      if (r.error instanceof ProviderError) {
+        this.onFailure(r.error);
+        await this.gate?.record(r.name, r.error);
+      }
+      if (signal?.aborted) break;
+      // Nothing else is in flight: do not wait for a hedge timer, start the next provider now.
+      if (running.size === 0 && !(await launch())) break;
     }
     throw lastError;
   }

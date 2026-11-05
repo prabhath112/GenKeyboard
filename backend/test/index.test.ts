@@ -25,3 +25,32 @@ describe("request body guards", () => {
     expect((await post("{nope", { "Content-Type": "application/json" })).status).toBe(400);
   });
 });
+
+describe("transform timing", () => {
+  function memoryKv() {
+    const m = new Map<string, string>();
+    return { get: async (k: string) => m.get(k) ?? null, put: async (k: string, v: string) => { m.set(k, v); } };
+  }
+
+  it("answers with a Server-Timing header naming the model that answered", async () => {
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify({ choices: [{ message: { content: "Fixed text." } }] }))) as typeof fetch;
+    try {
+      const res = await worker.fetch(
+        new Request("https://x/v1/transform", {
+          method: "POST",
+          body: JSON.stringify({ action: "grammar", text: "i has went" }),
+          headers: { "X-Device-Id": DEVICE, "Content-Type": "application/json" },
+        }),
+        { QUOTA: memoryKv(), GEMINI_API_KEY: "k", GEMINI_MODEL: "m", PROVIDER_ORDER: "gemini", HEDGE_AFTER_MS: "2500" } as unknown as Env,
+        ctx,
+      );
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ text: "Fixed text.", provider: "gemini" });
+      expect(res.headers.get("Server-Timing")).toMatch(/^total;dur=\d+, gemini;desc=ok;dur=\d+$/);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+});
