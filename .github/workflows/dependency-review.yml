@@ -1,0 +1,25 @@
+name: Dependency review
+
+# Runs on every pull request. A PR that adds or updates a dependency with a known vulnerability, at any
+# severity and in any scope, fails this check. The "Security gates" repository ruleset requires it, with no
+# bypass, so such a PR cannot merge until the dependency is fixed or removed.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write # lets the action post its summary comment when it fails
+
+jobs:
+  dependency-review:
+    name: Dependency review
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: low
+          fail-on-scopes: runtime, development, unknown
+          vulnerability-check: true
+          license-check: false
+          comment-summary-in-pr: on-failure
