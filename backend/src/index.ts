@@ -3,13 +3,15 @@ import { alert } from "./alerts";
 import { parseLimits, ProviderBudget } from "./budget";
 import { bumpHourly, hourlyReport } from "./hourly";
 import { type IntegrityEnv, integrityConfigured, verifyIntegrityToken } from "./integrity";
-import { ProviderChain, providersFromEnv, type ProviderEnv } from "./providers";
+import { type Attempt, ProviderChain, providersFromEnv, type ProviderEnv } from "./providers";
 import { admitDevice, consumeQuota, type QuotaStore } from "./quota";
 import { mintSession, sha256Hex, verifySession } from "./session";
 
 export interface Env extends ProviderEnv, IntegrityEnv {
   QUOTA: QuotaStore;
   PROVIDER_TIMEOUT_MS?: string;
+  /** Start the next model this many ms after the previous one if it has not answered (race, first wins). 0 or unset = strictly sequential. */
+  HEDGE_AFTER_MS?: string;
   /** Hidden abuse cap per device. Never shown to users; only bites a runaway script. */
   DEVICE_DAILY_LIMIT?: string;
   /** Secret. Comma-separated device ids exempt from the cap (owner's phones). */
@@ -58,11 +60,18 @@ const ACTIONS = ["grammar", "tone", "paraphrase", "shorten", "expand", "translat
 
 const DEVICE_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function json(status: number, body: unknown): Response {
+function json(status: number, body: unknown, extraHeaders: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+    headers: { "Content-Type": "application/json", "Cache-Control": "no-store", ...extraHeaders },
   });
+}
+
+/** Server-Timing value like `total;dur=1800, gemini-3.1-flash-lite;desc=ok;dur=1790`, to see which model is slow. */
+function serverTiming(attempts: Attempt[], totalMs: number): string {
+  const parts = [`total;dur=${totalMs}`];
+  for (const a of attempts) parts.push(`${a.provider.replace(/[^A-Za-z0-9_.-]/g, "_")};desc=${a.outcome};dur=${a.ms}`);
+  return parts.join(", ");
 }
 
 function error(status: number, code: string, message: string): Response {
@@ -155,8 +164,10 @@ async function handleTransform(req: Request, env: Env, ctx: ExecutionContext): P
     },
     timeoutMs,
     budget,
+    Number(env.HEDGE_AFTER_MS ?? 0),
   );
-  const signal = AbortSignal.timeout(timeoutMs * providers.length);
+  // The app gives up at 25 s; answer with a clean error before that instead of a client-side timeout.
+  const signal = AbortSignal.timeout(Math.min(timeoutMs * providers.length, 22000));
 
   const day = dayOf(new Date());
   ctx.waitUntil(bump(env.QUOTA, `req:${day}`));
@@ -169,7 +180,7 @@ async function handleTransform(req: Request, env: Env, ctx: ExecutionContext): P
     ctx.waitUntil(bumpBy(env.QUOTA, `latms:${day}`, Date.now() - started));
     ctx.waitUntil(bumpHourly(env.QUOTA, true));
     // No `remaining` in the response: capacity is managed server-side per model, users never see a counter.
-    return json(200, { text: cleanOutput(text, parsed.action), provider });
+    return json(200, { text: cleanOutput(text, parsed.action), provider }, { "Server-Timing": serverTiming(chain.attempts, Date.now() - started) });
   } catch (e) {
     const msg = (e as Error).message;
     console.error("all providers failed", msg);
